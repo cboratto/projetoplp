@@ -1,3 +1,9 @@
+Grupo:
+        Renan Soares, 41327853
+        Felipe Rocha, 31418864
+        Claudio Ribeiro, 41308859
+        Caio Boratto, 31328334
+
 PROG   -> MAIN {CLASSE}
 MAIN   -> class ID '{' public static void main ( String [ ] ID ) '{' CMD '}' '}'
 CLASSE -> class ID [extends ID] '{' {VAR} {METODO} '}'
