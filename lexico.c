@@ -6,7 +6,15 @@ char str[1000];
 
 int main() {
 	read();
-	printf(str);
+	//printf(str);
+	char *pch;
+	pch = strtok(str," ");
+	while (pch!= NULL){
+		printf("%s\n", pch);
+		tokenLibrary(pch);
+		pch = strtok(NULL, " ");
+	}
+
 	return 0;
 }
 
@@ -40,3 +48,11 @@ void read() {
 	}
    	fclose(fp);
 }
+
+void tokenLibrary(char * tk) {
+	//int i= strcmp("if",tk);
+	//printf("numero encontrado %d \n", i);
+	if (strcmp("if",tk)==0) {
+		printf("encontrei um --> %s \n", tk );
+	}
+	}
