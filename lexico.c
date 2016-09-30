@@ -13,7 +13,7 @@ int main() {
 	cleanTokenFile('c');
 	read();
     removeCommentLine();
-    printf("%s\n",str );
+    //printf("%s\n",str );
 	char *pch;
 	pch = strtok(str," ");
 	while (pch!= NULL){
