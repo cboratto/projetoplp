@@ -18,13 +18,19 @@ b
 1
 54321
 2
-12345c12142534
-12345c1214253___4_
 <
-class teste extends teste{ 
-public static void main (){
-int a;
-int b;
-System.out.println();
+class teste extends teste { 
+public static void main ( ) { //adadsds / /
+//BBBBBBBBBB
+int a ;
+int b ;
+int var_123 ; // asahdhsdh
+boolean var_bool ;
+System.out.println ( ) ;
 }
+/* testando
+adaojfsjfs
+dsdjd // aaa /*adshfjhf*/
+*/
+
 }

@@ -3,12 +3,17 @@
 #include <string.h>
 #define BUFFER 2048
 char str[BUFFER];
+
+char identifiedStringsVector[128][30]; //128 posicoes com 30 caracteres cada
+int  idxIdentifiedStringVector=0;
+
 static const char TOKEN_FILE[] = "token.txt";
 
 int main() {
 	cleanTokenFile('c');
 	read();
     removeCommentLine();
+    printf("%s\n",str );
 	char *pch;
 	pch = strtok(str," ");
 	while (pch!= NULL){
@@ -21,7 +26,33 @@ int main() {
 }
 
 /*******************************************
-    Cria o arquivo de TOKENs
+    Controla Vetor de strings validas     
+*******************************************/
+int identifiedStrings( char * id ){
+  int i=0;
+  char c[2];
+  for (i=0; i< idxIdentifiedStringVector ; i++) {
+    if (strcmp(identifiedStringsVector[i],id)==0) {
+        i = i+1;
+        //sprintf(c, "%d", i);
+        //return c;
+        return i;
+
+    }
+  }
+  strcpy(identifiedStringsVector[idxIdentifiedStringVector], id);
+  i = idxIdentifiedStringVector;
+  idxIdentifiedStringVector++;
+
+    i = i+1;
+    //sprintf(c, "%d", i);
+    //printf("%s\n", c);    
+    //return c;
+    return i;
+}
+
+/*******************************************
+    Remove comentarios multline
 *******************************************/
 void removeCommentLine() {
     char strwithoutcomment[BUFFER];
@@ -365,17 +396,23 @@ void tokenLibrary(char * tk) {
             if (primeiraLeitura==1){
                 //Leu um caracter diferente de ALPHA como primeiro caracter entao nao é variavel
                 printf("ERRO LEXICO: %s\n", tk);
-                cleanTokenFile('d');
                 exit(-1);
             }
             primeiraLeitura=0;
             variavel[index++]=tk[i];
 
+        } else {
+            printf("ERRO LEXICO: %s\n", tk);
+            exit(-1);
         }
+
     }
     char n[1024];
+    int idIndex =identifiedStrings(variavel);
+    char idIndexString[2];
+    sprintf(idIndexString, "%d", idIndex);
     strcpy(n, "<id,");
-    strcat(n, variavel);
+    strcat(n, idIndexString);
     strcat(n, ">"); 
     write(n);   
     return; 
