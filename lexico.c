@@ -1,28 +1,89 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define BUFFER 2048
+#define BUFFER 4196
 char str[BUFFER];
+char str3[BUFFER];
 
 char identifiedStringsVector[128][30]; //128 posicoes com 30 caracteres cada
 int  idxIdentifiedStringVector=0;
 
+char tokenKey[2048][30];
+char tokenValue[2048][30];
+int  idxToken=0;
+int  idxNextToken=0;
+
 static const char TOKEN_FILE[] = "token.txt";
+static const char SOURCE_FILE[] = "file.txt";
+
+const char* getNextRecognizedKeyToken ();
+const char* spreadTokenKeyValue(char *tk, int kv);
+void addRecognizedToken(char* key, char *value);
+void printRecognizedToken();
+void tokenLibrary(char * tk);
+int identifiedStrings( char * id );
+void removeCommentLine();
+void cleanTokenFile(char p);
+void write(char *tk);
+void read(char *filename);
+void readToken();
+void tokenLibrary(char * tk);
+
 
 int main() {
 	cleanTokenFile('c');
-	read();
+	read(SOURCE_FILE);
     removeCommentLine();
-    //printf("%s\n",str );
 	char *pch;
 	pch = strtok(str," ");
 	while (pch!= NULL){
-		//printf("%s\n", pch);
 		tokenLibrary(pch);
 		pch = strtok(NULL, " ");
 	}
 
+    //Inicia leitura dos tokens
+    readToken();
+    pch = strtok(str3," ");
+    while (pch!= NULL){        
+        addRecognizedToken(spreadTokenKeyValue(pch,0),spreadTokenKeyValue(pch,1));
+        pch = strtok(NULL, " ");
+    }
+    //printRecognizedToken();    
+    AnalisadorSintatico();
+
 	return 0;
+}
+
+/*******************************************
+    Recognized Tokens
+*******************************************/
+void addRecognizedToken(char* key, char *value) {
+    strcpy(tokenKey[idxToken], key);
+    strcpy(tokenValue[idxToken], value);
+    idxToken++;
+}
+
+/*******************************************
+    Print Recognized Tokens
+*******************************************/
+void printRecognizedToken() {
+    int i=0;
+    for (i=0; i < idxToken ; i ++) {
+        printf("%s/%s\n", tokenKey[i],tokenValue[i] );
+    }
+}
+/*******************************************
+    get next
+*******************************************/
+const char* getNextRecognizedKeyToken (){
+    if (idxNextToken>=idxToken){
+        return;
+    }
+    char *tokenKey1 = malloc(30);
+    strcpy(tokenKey1,tokenKey[idxNextToken]);
+    idxNextToken++;
+
+    return tokenKey1;
 }
 
 /*******************************************
@@ -117,11 +178,11 @@ void write(char *tk) {
 	Função realiza realiza a leitura
 	e joga todo o arquivo em um buffer
 *******************************************/
-void read() {
+void read(char *filename) {
 	FILE *fp;
 	char c;
 	
-	fp = fopen("file.txt", "r");
+	fp = fopen(filename, "r");
 	int ignorarLinha=0;
 	while(1) {
 		c = fgetc(fp);
@@ -154,10 +215,143 @@ void read() {
         else {
       		strcat(str, " ");
       	}
-        
+
 	}
    	fclose(fp);
 }
+
+/*******************************************
+    Separa os tokens em key,value
+*******************************************/
+const char* spreadTokenKeyValue (char *tk, int kv) {
+    char *tokenKey = malloc(30);
+    char *tokenValue = malloc(30);    
+    //memset(tokenKey,0, 2048);
+    //memset(tokenValue,0, 2048);
+    int antesVirgula=1;
+    int i=0;
+
+    for (i=0; tk[i]!='\0'; i++){
+        if (tk[i]=='<') {
+            continue;
+        } else if (tk[i]==',') {
+            antesVirgula=0;
+            continue;
+        } else if (tk[i]=='>') {
+            continue;
+        } else {
+            if (antesVirgula==1) {
+                tokenKey[strlen(tokenKey)] = tk[i];
+                tokenKey[strlen(tokenKey)+1] = '\0';
+            } else {
+                tokenValue[strlen(tokenValue)] = tk[i];
+                tokenValue[strlen(tokenValue)+1] = '\0';
+            }
+        }
+
+    }
+    if (kv ==0 ) {
+        return tokenKey;
+    } else if (kv==1) {
+        return tokenValue;
+    }
+
+}
+/*******************************************
+    Função realiza realiza a leitura
+    e joga todo o arquivo em um buffer
+*******************************************/
+void readToken() {
+    FILE *fp;
+    char c;
+    
+    fp = fopen(TOKEN_FILE, "r");
+    
+    int ignorarlinha=0;
+
+    while(1) {
+        c = fgetc(fp);
+        if(feof(fp)){ 
+         break;
+        }
+        
+        if(c != '\n' ) {            
+            str3[strlen(str3)] = c;
+            str3[strlen(str3)+1] = '\0';
+        }
+            
+        else  {
+            strcat(str3, " ");
+        }
+    }
+
+    fclose(fp);
+}
+
+/*******************************************
+    Sintaxe
+*******************************************/
+
+void AnalisadorSintatico() {
+    if (strcmp(getNextRecognizedKeyToken(),"class")==0){
+        goto CLASS;
+    } 
+
+    CLASS: 
+        if (strcmp(getNextRecognizedKeyToken(),"id")==0) {
+            if (strcmp(getNextRecognizedKeyToken(),"ACH")==0) {
+                if (strcmp(getNextRecognizedKeyToken(),"public")==0) {
+                    if (strcmp(getNextRecognizedKeyToken(),"static")==0) {
+                        if (strcmp(getNextRecognizedKeyToken(),"void")==0) {
+                            if (strcmp(getNextRecognizedKeyToken(),"main")==0) {
+                                if (strcmp(getNextRecognizedKeyToken(),"AP")==0) {
+                                    if (strcmp(getNextRecognizedKeyToken(),"id")==0) { //STRING
+                                        if (strcmp(getNextRecognizedKeyToken(),"AC")==0) {
+                                            if (strcmp(getNextRecognizedKeyToken(),"FC")==0) {
+                                                if (strcmp(getNextRecognizedKeyToken(),"FP")==0) {
+                                                    if (strcmp(getNextRecognizedKeyToken(),"AP")==0) {
+                                                        goto STMT;
+                                                    } else {
+                                                        printf("[ERRO SINTATICO][12] Esperado AP. Encontrado %s\n",tokenKey[idxToken]);     
+                                                    }
+                                                } else {
+                                                    printf("[ERRO SINTATICO][11] Esperado FP. Encontrado %s\n",tokenKey[idxToken]);    
+                                                }
+                                            } else {
+                                                printf("[ERRO SINTATICO][10] Esperado FC. Encontrado %s\n",tokenKey[idxToken]);    
+                                            }
+                                        } else {
+                                            printf("[ERRO SINTATICO][9] Esperado AC. Encontrado %s\n",tokenKey[idxToken]);
+                                        }
+                                    } else {
+                                        printf("[ERRO SINTATICO][8] Esperado id. Encontrado %s\n",tokenKey[idxToken]);
+                                    }
+                                } else {
+                                    printf("[ERRO SINTATICO][7] Esperado AP. Encontrado %s\n",tokenKey[idxToken]);
+                                }
+                            } else {
+                                printf("[ERRO SINTATICO][6] Esperado main. Encontrado %s\n",tokenKey[idxToken]);        
+                            }
+                        } else {
+                            printf("[ERRO SINTATICO][5] Esperado void. Encontrado %s\n",tokenKey[idxToken]);        
+                        }
+                    } else {
+                        printf("[ERRO SINTATICO][4] Esperado static. Encontrado %s\n",tokenKey[idxToken]);        
+                    }
+                } else {
+                    printf("[ERRO SINTATICO][3] Esperado public. Encontrado %s\n",tokenKey[idxToken]);    
+                }
+            } else {
+                printf("[ERRO SINTATICO][2] Esperado ACH. Encontrado %s\n",tokenKey[idxToken]);
+            }
+        }else {
+            printf("[ERRO SINTATICO][1] Esperado id. Encontrado %s\n",tokenKey[idxToken]);
+        }
+    STMT:
+        
+            
+}
+
 
 /*******************************************
 	Biblioteca de TOKENs
@@ -383,7 +577,12 @@ void tokenLibrary(char * tk) {
         if (tk[i]=='a' || tk[i]=='b' ||tk[i]=='c' ||tk[i]=='d' ||tk[i]=='e' ||tk[i]=='f' ||tk[i]=='g' ||
             tk[i]=='h' ||tk[i]=='i' ||tk[i]=='j' ||tk[i]=='k' ||tk[i]=='l' ||tk[i]=='m' ||tk[i]=='n' ||
             tk[i]=='o' ||tk[i]=='p' ||tk[i]=='q' ||tk[i]=='r' ||tk[i]=='r' ||tk[i]=='s' ||tk[i]=='t' ||
-            tk[i]=='u' ||tk[i]=='v' ||tk[i]=='x' ||tk[i]=='z' ||tk[i]=='y' ||tk[i]=='w') 
+            tk[i]=='u' ||tk[i]=='v' ||tk[i]=='x' ||tk[i]=='z' ||tk[i]=='y' ||tk[i]=='w' ||
+            tk[i]=='A' || tk[i]=='B' ||tk[i]=='C' ||tk[i]=='D' ||tk[i]=='E' ||tk[i]=='F' ||tk[i]=='G' ||
+            tk[i]=='H' ||tk[i]=='I' ||tk[i]=='J' ||tk[i]=='K' ||tk[i]=='L' ||tk[i]=='M' ||tk[i]=='N' ||
+            tk[i]=='O' ||tk[i]=='P' ||tk[i]=='Q' ||tk[i]=='R' ||tk[i]=='R' ||tk[i]=='S' ||tk[i]=='T' ||
+            tk[i]=='U' ||tk[i]=='V' ||tk[i]=='X' ||tk[i]=='Z' ||tk[i]=='Y' ||tk[i]=='W' 
+            ) 
         {
             //
             primeiraLeitura=0;
