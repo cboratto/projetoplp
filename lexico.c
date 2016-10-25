@@ -16,7 +16,7 @@ int  idxNextToken=0;
 static const char TOKEN_FILE[] = "token.txt";
 static const char SOURCE_FILE[] = "file.txt";
 
-const char* getNextRecognizedKeyToken ();
+const char* getRecognizedKeyToken ();
 const char* spreadTokenKeyValue(char *tk, int kv);
 void addRecognizedToken(char* key, char *value);
 void printRecognizedToken();
@@ -48,7 +48,8 @@ int main() {
         addRecognizedToken(spreadTokenKeyValue(pch,0),spreadTokenKeyValue(pch,1));
         pch = strtok(NULL, " ");
     }
-    //printRecognizedToken();    
+	printRecognizedToken();
+    printf("%s\n",getRecognizedKeyToken());
     AnalisadorSintatico();
 
 	return 0;
@@ -75,16 +76,32 @@ void printRecognizedToken() {
 /*******************************************
     get next
 *******************************************/
-const char* getNextRecognizedKeyToken (){
-    if (idxNextToken>=idxToken){
-        return;
-    }
+const char* getRecognizedKeyToken(){
+    //if (idxNextToken>=idxToken){
+    //    return;
+    //}
     char *tokenKey1 = malloc(30);
     strcpy(tokenKey1,tokenKey[idxNextToken]);
+	printf("1 --> %s\n",tokenKey[idxNextToken]);
+	printf("2 --> %s\n",tokenKey1);
+    //idxNextToken++;
+	return tokenKey1;
+    //return tokenKey[idxNextToken];
+}
+/*******************************************
+    get next
+*******************************************/
+void nextRecognizedKeyToken (){
+    if (idxNextToken>=idxToken){
+		printf("Iterei ate o limite");
+        return;
+    }
+    //char *tokenKey1 = malloc(30);
+    //strcpy(tokenKey1,tokenKey[idxNextToken]);
     idxNextToken++;
 
-    return tokenKey1;
 }
+
 
 /*******************************************
     Controla Vetor de strings validas     
@@ -293,61 +310,110 @@ void readToken() {
 *******************************************/
 
 void AnalisadorSintatico() {
-    if (strcmp(getNextRecognizedKeyToken(),"class")==0){
-        goto CLASS;
-    } 
-
-    CLASS: 
-        if (strcmp(getNextRecognizedKeyToken(),"id")==0) {
-            if (strcmp(getNextRecognizedKeyToken(),"ACH")==0) {
-                if (strcmp(getNextRecognizedKeyToken(),"public")==0) {
-                    if (strcmp(getNextRecognizedKeyToken(),"static")==0) {
-                        if (strcmp(getNextRecognizedKeyToken(),"void")==0) {
-                            if (strcmp(getNextRecognizedKeyToken(),"main")==0) {
-                                if (strcmp(getNextRecognizedKeyToken(),"AP")==0) {
-                                    if (strcmp(getNextRecognizedKeyToken(),"id")==0) { //STRING
-                                        if (strcmp(getNextRecognizedKeyToken(),"AC")==0) {
-                                            if (strcmp(getNextRecognizedKeyToken(),"FC")==0) {
-                                                if (strcmp(getNextRecognizedKeyToken(),"FP")==0) {
-                                                    if (strcmp(getNextRecognizedKeyToken(),"AP")==0) {
-                                                        goto STMT;
-                                                    } else {
-                                                        printf("[ERRO SINTATICO][12] Esperado AP. Encontrado %s\n",tokenKey[idxToken]);     
-                                                    }
-                                                } else {
-                                                    printf("[ERRO SINTATICO][11] Esperado FP. Encontrado %s\n",tokenKey[idxToken]);    
-                                                }
-                                            } else {
-                                                printf("[ERRO SINTATICO][10] Esperado FC. Encontrado %s\n",tokenKey[idxToken]);    
-                                            }
-                                        } else {
-                                            printf("[ERRO SINTATICO][9] Esperado AC. Encontrado %s\n",tokenKey[idxToken]);
-                                        }
-                                    } else {
-                                        printf("[ERRO SINTATICO][8] Esperado id. Encontrado %s\n",tokenKey[idxToken]);
-                                    }
-                                } else {
-                                    printf("[ERRO SINTATICO][7] Esperado AP. Encontrado %s\n",tokenKey[idxToken]);
-                                }
-                            } else {
-                                printf("[ERRO SINTATICO][6] Esperado main. Encontrado %s\n",tokenKey[idxToken]);        
-                            }
-                        } else {
-                            printf("[ERRO SINTATICO][5] Esperado void. Encontrado %s\n",tokenKey[idxToken]);        
-                        }
-                    } else {
-                        printf("[ERRO SINTATICO][4] Esperado static. Encontrado %s\n",tokenKey[idxToken]);        
-                    }
-                } else {
-                    printf("[ERRO SINTATICO][3] Esperado public. Encontrado %s\n",tokenKey[idxToken]);    
-                }
-            } else {
-                printf("[ERRO SINTATICO][2] Esperado ACH. Encontrado %s\n",tokenKey[idxToken]);
-            }
-        }else {
-            printf("[ERRO SINTATICO][1] Esperado id. Encontrado %s\n",tokenKey[idxToken]);
-        }
-    STMT:
+    goto MAIN;
+    
+	CLASSE: 
+		if (strcmp(getRecognizedKeyToken(),"AC")==0) {
+			nextRecognizedKeyToken();
+			if (strcmp(getRecognizedKeyToken(),"extends")==0) {
+				nextRecognizedKeyToken();
+				if (strcmp(getRecognizedKeyToken(),"id")==0) {
+					nextRecognizedKeyToken();
+					if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
+						printf("teste 2");
+					} else {
+						//ach
+						printf("[ERRO SINTATICO][18] Esperado ACH. Encontrado %s\n",getRecognizedKeyToken());
+					}
+				} else {
+					//id
+					printf("[ERRO SINTATICO][17] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
+				}
+			} else {
+				//extends
+				printf("[ERRO SINTATICO][16] Esperado extends. Encontrado %s\n",getRecognizedKeyToken());
+			}
+		} else {
+			//AC
+			printf("[ERRO SINTATICO][15] Esperado AC. Encontrado %s\n",getRecognizedKeyToken());
+			
+		}
+	CMD: 
+		printf("teste");
+    MAIN: 
+		if (strcmp(getRecognizedKeyToken(),"class")==0) {
+			nextRecognizedKeyToken();
+			if (strcmp(getRecognizedKeyToken(),"id")==0) {
+				nextRecognizedKeyToken();
+				if (strcmp(getRecognizedKeyToken(),"AC")==0) {
+					goto CLASSE;
+				} else if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
+					nextRecognizedKeyToken();
+					if (strcmp(getRecognizedKeyToken(),"public")==0) {
+						nextRecognizedKeyToken();
+						if (strcmp(getRecognizedKeyToken(),"static")==0)  {
+							nextRecognizedKeyToken();
+							if (strcmp(getRecognizedKeyToken(),"void")==0) {
+								nextRecognizedKeyToken();
+								if (strcmp(getRecognizedKeyToken(),"main")==0) {
+									nextRecognizedKeyToken();
+									if (strcmp(getRecognizedKeyToken(),"AP")==0) {
+										nextRecognizedKeyToken();
+										if (strcmp(getRecognizedKeyToken(),"id")==0) {
+											nextRecognizedKeyToken();
+											if (strcmp(getRecognizedKeyToken(),"AC")==0) {
+												nextRecognizedKeyToken();
+												if (strcmp(getRecognizedKeyToken(),"FC")==0) {
+													nextRecognizedKeyToken();
+													if (strcmp(getRecognizedKeyToken(),"id")==0){
+														nextRecognizedKeyToken();
+														if (strcmp(getRecognizedKeyToken(),"FP")==0){
+															nextRecognizedKeyToken();
+															if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
+																goto CMD;
+															} else {																
+																printf("[ERRO SINTATICO][14] Esperado ACH. Encontrado %s\n",getRecognizedKeyToken());
+															}
+														} else {															
+															printf("[ERRO SINTATICO][13] Esperado FP. Encontrado %s\n",getRecognizedKeyToken());
+														}
+													} else {														
+														printf("[ERRO SINTATICO][12] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
+													}
+												} else {
+													printf("[ERRO SINTATICO][11] Esperado FC. Encontrado %s\n",getRecognizedKeyToken());
+												}
+											} else {
+												printf("[ERRO SINTATICO][10] Esperado AC. Encontrado %s\n",getRecognizedKeyToken());
+											}
+										} else {
+											printf("[ERRO SINTATICO][9] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
+										}
+									} else {
+										printf("[ERRO SINTATICO][8] Esperado AP. Encontrado %s\n",getRecognizedKeyToken());
+									}
+								} else {
+									printf("[ERRO SINTATICO][7] Esperado main. Encontrado %s\n",getRecognizedKeyToken());
+								}
+							} else {
+								printf("[ERRO SINTATICO][6] Esperado void. Encontrado %s\n",getRecognizedKeyToken());
+							}
+						} else {
+							printf("[ERRO SINTATICO][5] Esperado static. Encontrado %s\n",getRecognizedKeyToken());
+						}
+					} else {
+						printf("[ERRO SINTATICO][4] Esperado public. Encontrado %s\n",getRecognizedKeyToken());
+					}
+				} else {
+					printf("[ERRO SINTATICO][3] Esperado ACH. Encontrado %s\n",getRecognizedKeyToken());
+				}
+			} else {
+				printf("[ERRO SINTATICO][2] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
+			}
+		} else {
+			printf("[ERRO SINTATICO][1] Esperado class. Encontrado %s\n",getRecognizedKeyToken());
+		}
+        
         
             
 }
