@@ -425,7 +425,7 @@ void AnalisadorSintatico() {
                                                             nextRecognizedKeyToken();
                                                             goto CMD;
                                                         } else {
-                                                            printf("[ERRO SINTATICO][29] Esperado PV. Encontrado  %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                                            printf("[ERRO SINTATICO][30] Esperado PV. Encontrado  %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
                                                         }                                                                                                                
                                                     } else {
                                                         printf("[ERRO SINTATICO][29] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
@@ -464,12 +464,13 @@ void AnalisadorSintatico() {
         } else if (strcmp(getRecognizedKeyToken(),"if")==0)  {
             nextRecognizedKeyToken();
             if (strcmp(getRecognizedKeyToken(),"AP")==0) {
+                nextRecognizedKeyToken();
                 COND:
-                if (strcmp(getRecognizedKeyToken(),"num")==0) {
+                if (strcmp(getRecognizedKeyToken(),"num")==0||strcmp(getRecognizedKeyToken(),"id")==0) {
                     nextRecognizedKeyToken();
                     if (strcmp(getRecognizedKeyToken(),"EQ")==0 || (strcmp(getRecognizedKeyToken(),"LT")==0) ) {
                         nextRecognizedKeyToken();
-                        if (strcmp(getRecognizedKeyToken(),"num")==0) {
+                        if (strcmp(getRecognizedKeyToken(),"num")==0||strcmp(getRecognizedKeyToken(),"id")==0) {
                             nextRecognizedKeyToken();
                             if (strcmp(getRecognizedKeyToken(),"AND")==0||strcmp(getRecognizedKeyToken(),"OR")==0) {
                                 nextRecognizedKeyToken();
@@ -512,14 +513,38 @@ void AnalisadorSintatico() {
                 printf("[ERRO SINTATICO][42] Esperado PV. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
             }
         }
-        //WHILE
-        //else if (strcmp(getRecognizedKeyToken(),"PV")==0) {
+        //atribuicao
+        else if (strcmp(getRecognizedKeyToken(),"id")==0) {
+            nextRecognizedKeyToken();
+            if (strcmp(getRecognizedKeyToken(),"ATR")==0) {
+                nextRecognizedKeyToken();
+                if (strcmp(getRecognizedKeyToken(),"id")==0||strcmp(getRecognizedKeyToken(),"num")==0) {
+                    nextRecognizedKeyToken();
+                    if (strcmp(getRecognizedKeyToken(),"PV")==0) {
+                        nextRecognizedKeyToken();
+                        goto STMT;
+                    } else {
+                        //;                        
+                        printf("[ERRO SINTATICO][44] Esperado PV. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                    }
+                } else {
+                    //variavel ou num
+                    printf("[ERRO SINTATICO][43] Esperado id , num. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                }
+            } else {
+                //esperado sinal de igual
+                printf("[ERRO SINTATICO][42] Esperado ATR. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+            }
+        } else if (strcmp(getRecognizedKeyToken(),"else")==0) {
+            nextRecognizedKeyToken();             
+            goto CMD;
+        }
             
         //} 
         // FECHA CHAVES AQUI
         else if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
             nextRecognizedKeyToken();
-            goto INICIO;
+            goto CMD;
         } else {
             printf("[ERRO SINTATICO][99] Esperado FP CMD. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
         }
