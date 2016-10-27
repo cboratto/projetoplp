@@ -311,24 +311,73 @@ void readToken() {
 /*******************************************
     Sintaxe
 *******************************************/
+int pilhaOrigem[100];
+int idxPilha=0;
+
+void push(int x) {
+    pilhaOrigem[idxPilha] = x;
+    idxPilha++;
+}
+
+int pop() {
+    int ret;
+    if (idxPilha<0) {
+        printf("deu ruim na pilha\n");
+        return 2;
+        exit(-1);
+    }
+
+    ret = pilhaOrigem[idxPilha];
+    idxPilha--;
+    return ret;
+}
 
 void AnalisadorSintatico() {
     int CMDfechaChaves=0;
     int MAINfechaChaves=0;
+    int METODOfechaChaves=0;
 
-    while (idxNextToken < idxToken) {
-        INICIO:
-            goto MAIN;        
+
+    enum origem {Main = 1, Classe, Cmd, Metodo } orig;
+
+    goto MAIN;
+
+    INICIO: 
+
+    orig=pop();
+    printf("valor da pilha %d | valor do index %d\n",orig, idxNextToken );
+    switch(orig) {
+        case Main:
+            goto MAIN_FIM;
+        break;
+
+        case Classe:
+            goto CLASSE;
+        break;
+
+        case Cmd:
+            goto CMD;
+        break;
+
+        case Metodo:
+            goto METODO_FIM;
+
+        break;
     }
     
+    goto INICIO;
+
 	CLASSE: 
     printf("INICIANDO LEITURA CLASSE\n");
 		if (strcmp(getRecognizedKeyToken(),"class")==0) {
 			nextRecognizedKeyToken();
 			if (strcmp(getRecognizedKeyToken(),"id")==0) {
 				nextRecognizedKeyToken();
-                printf("finalizando o programa\n");
-                exit(0);   
+                if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
+                    goto METODO;
+                } else {
+                    printf("[ERRO SINTATICO][17] Esperado ACH. Encontrado %s\n",getRecognizedKeyToken());
+                } 
 			} else {
 				printf("[ERRO SINTATICO][16] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
 			}
@@ -342,10 +391,12 @@ void AnalisadorSintatico() {
     if (CMDfechaChaves>0 && strcmp(getRecognizedKeyToken(),"FCH")==0){
         nextRecognizedKeyToken();
         printf("CMD - fechei uma chaves\n");
+        goto INICIO;
     }
     if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
         CMDfechaChaves++;
         nextRecognizedKeyToken();
+        STMT:
         if (strcmp(getRecognizedKeyToken(),"System.out.println")==0) {
             nextRecognizedKeyToken();
             if (strcmp(getRecognizedKeyToken(),"AP")==0) {
@@ -447,10 +498,20 @@ void AnalisadorSintatico() {
             }
                                                                    
         }
-        // IF 
-        //else if (strcmp(getRecognizedKeyToken(),"PV")==0)  {
-            
-        //}
+        // int
+        else if (strcmp(getRecognizedKeyToken(),"int")==0 ||strcmp(getRecognizedKeyToken(),"boolean")==0)  {
+            nextRecognizedKeyToken();
+            if (strcmp(getRecognizedKeyToken(),"id")==0)  {
+                nextRecognizedKeyToken();
+                if (strcmp(getRecognizedKeyToken(),"PV")==0) {
+                    nextRecognizedKeyToken();
+                    goto STMT;
+                }
+            } else {
+                //id
+                printf("[ERRO SINTATICO][42] Esperado PV. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+            }
+        }
         //WHILE
         //else if (strcmp(getRecognizedKeyToken(),"PV")==0) {
             
@@ -458,28 +519,82 @@ void AnalisadorSintatico() {
         // FECHA CHAVES AQUI
         else if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
             nextRecognizedKeyToken();
-            goto MAIN;
+            goto INICIO;
         } else {
             printf("[ERRO SINTATICO][99] Esperado FP CMD. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
         }
-        goto INICIO;                                                             
         
     }//CMD FINALIZA AQUI
 
-    MAIN: 
-        if (MAINfechaChaves>0 && strcmp(getRecognizedKeyToken(),"FCH")==0){
+    METODO:
+        printf("INICIANDO LEITURA METODO\n");
+        //if (METODOfechaChaves>0 && strcmp(getRecognizedKeyToken(),"FCH")==0){
+        //    nextRecognizedKeyToken();
+        //    printf("METODO - fechei uma chaves\n");
+        //    goto INICIO;
+        //}
+        if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
             nextRecognizedKeyToken();
-            printf("MAIN - fechei uma chaves\n");
+            if (strcmp(getRecognizedKeyToken(),"public")==0) {
+                nextRecognizedKeyToken();
+                if (strcmp(getRecognizedKeyToken(),"int")==0||strcmp(getRecognizedKeyToken(),"boolean")==0) {
+                    nextRecognizedKeyToken();
+                    if (strcmp(getRecognizedKeyToken(),"id")==0) {
+                        nextRecognizedKeyToken();
+                        if (strcmp(getRecognizedKeyToken(),"AP")==0) {
+                            nextRecognizedKeyToken();
+                            if (strcmp(getRecognizedKeyToken(),"int")==0||strcmp(getRecognizedKeyToken(),"boolean")==0) {
+                                nextRecognizedKeyToken();
+                                if (strcmp(getRecognizedKeyToken(),"id")==0) {
+                                    nextRecognizedKeyToken();
+                                    if (strcmp(getRecognizedKeyToken(),"FP")==0) {
+                                        nextRecognizedKeyToken();
+
+                                        push(4);
+                                        goto CMD;
+                                        METODO_FIM:
+                                        if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
+                                            nextRecognizedKeyToken();
+                                            goto INICIO;
+                                        }
+                                    }
+                                } else {
+                                    //fp
+                                    printf("[ERRO SINTATICO][41] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                }
+                            } else {
+                                //boolean int
+                                printf("[ERRO SINTATICO][40] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                            }
+                        } else {
+                            //ap
+                            printf("[ERRO SINTATICO][39] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                        }
+                    } else {
+                        //id
+                        printf("[ERRO SINTATICO][38] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                    }
+                } else {
+                    //boolean ou int
+                    printf("[ERRO SINTATICO][37] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                }
+            } else {
+                //public
+                printf("[ERRO SINTATICO][36] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+            }
+        } else {
+            //ach
+            printf("[ERRO SINTATICO][35] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
         }
+
+    MAIN: 
         printf("INICIANDO LEITURA MAIN\n");
 		if (strcmp(getRecognizedKeyToken(),"class")==0) {
 			nextRecognizedKeyToken();
 			if (strcmp(getRecognizedKeyToken(),"id")==0) {
 				nextRecognizedKeyToken();
-				if (strcmp(getRecognizedKeyToken(),"AC")==0) {
-					goto CLASSE;
-				} else if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
-					nextRecognizedKeyToken();
+				if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
+                    nextRecognizedKeyToken();
 					if (strcmp(getRecognizedKeyToken(),"public")==0) {
 						nextRecognizedKeyToken();
 						if (strcmp(getRecognizedKeyToken(),"static")==0)  {
@@ -498,7 +613,14 @@ void AnalisadorSintatico() {
 													nextRecognizedKeyToken();
 													if (strcmp(getRecognizedKeyToken(),"FP")==0){
 														nextRecognizedKeyToken();
+                                                        push(1);
                                                         goto CMD; 
+                                                        MAIN_FIM:
+                                                        if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
+                                                            nextRecognizedKeyToken();
+                                                            printf("MAIN - ENCERRANDO\n");
+                                                            goto INICIO;
+                                                        }
 
 													} else {														
 														printf("[ERRO SINTATICO][12] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
@@ -536,12 +658,6 @@ void AnalisadorSintatico() {
 		} else {
 			printf("[ERRO SINTATICO][1] Esperado class. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
 		}
-        if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
-            nextRecognizedKeyToken();
-            goto CLASSE;
-        } else {
-            printf("nao terminou ok a classe\n");
-        }
         printf("FIM %s , %s - %d \n", getRecognizedKeyToken(),getRecognizedValueToken(), idxNextToken);    
 }
 
