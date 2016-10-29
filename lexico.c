@@ -320,7 +320,7 @@ struct Stack {
    int current;
 };
 
-struct Stack stack[10];
+struct Stack stack[128];
 
 
 /*******************************************
@@ -333,7 +333,7 @@ struct StackLog {
    char mensagem[2048];
    int current;
 };
-struct StackLog stackLog[100];
+struct StackLog stackLog[128];
 
 void pushLog(char* funcao, char* esperado) {
     char  mensagemFinal[2048];
@@ -380,7 +380,7 @@ int match(char* tk, char* word){
 
 
 void update(int newvalue) {
-    printf("update - current %d\n",newvalue);
+    //printf("update - current %d\n",newvalue);
     stack[idxStack].current=newvalue;
 }
 
@@ -400,11 +400,11 @@ void push(int vstart, int vcurrent ) {
 }
 
 void pop() {
-    if (idxStack<1) {
+    //printf("pop - retirado idxStack %d da pilha\n",idxStack );
+    if (idxStack<0) {
         printf("[ERRO]deu ruim na pilha\n");
         exit(-1);
     }
-    //printf("pop - retirado idxStack %d da pilha\n",idxStack );
     idxStack--;
 }
 
@@ -447,14 +447,477 @@ int nonTerminalAccept() {
     return TRUE;
 }
 
-int REXP() {
+int VAR() {
+    nonTerminalStart();
+
+    if (lookahead("int") ) {
+        if (lookahead("id") ) {
+            if (lookahead("PV") ) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[VAR]", "PV");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[VAR]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[VAR]", "int");
+        nonTerminalError();
+    }
+    if (lookahead("boolean") ) {
+        if (lookahead("id") ) {
+            if (lookahead("PV") ) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[VAR]", "PV");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[VAR]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[VAR]", "boolean");
+        nonTerminalError();
+    }
+
+    pushLog("[VAR]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int PARAMS() {
     return FALSE;
+}
+
+int METODO () {
+    nonTerminalStart();
+    printf("\t\t\t\t\tTESTANDO METODO \n");
+    if (lookahead("public") ) {
+        if (lookahead("int") || lookahead("boolean")  ) {
+            if (lookahead("id") ) {
+                if (lookahead("AP") ) {
+                    if (PARAMS() ) {
+                        if (lookahead("FP") ) {
+                            return nonTerminalAccept();
+                        } else {
+                            pushLog("[METODO]", "FP");
+                            nonTerminalError();
+                        }
+                    } else {
+                        pushLog("[METODO]", "PARAMS()");
+                        nonTerminalError();
+                    }
+                } else {
+                    pushLog("[METODO]", "AP");
+                    nonTerminalError();
+                }
+            } else {
+                pushLog("[METODO]", "id");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[METODO]", "int ou boolean");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[METODO]", "public");
+        nonTerminalError();
+    }
+    
+
+    pushLog("[METODO]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+int CLASSE() {
+    nonTerminalStart();
+
+    if (lookahead("class") ) {
+        if (lookahead("id") ) {
+            if (lookahead("extends") ) {
+                if (lookahead("id") ) {
+                    goto APOS_EXTENDS;
+                } else {
+                    pushLog("[CLASSE]", "id");
+                    nonTerminalError();
+                }
+            } else {
+                APOS_EXTENDS:
+                if (lookahead("ACH") ) {
+                    VAR_TESTE_AGAIN:
+                    if (VAR() ) {   
+                        goto VAR_TESTE_AGAIN;                                             
+                    } else {
+                        //CASO NAO HOUVER DECLARAO DE VAR OK
+                        if ( METODO() ) {
+                            if (lookahead("FCH") ) {
+                                return nonTerminalAccept();
+                            } else {
+                                pushLog("[CLASSE]", "FCH");
+                                nonTerminalError();
+                            }
+                        } else {
+                            pushLog("[CLASSE]", "<TENTATIVA METODO()>");
+                            nonTerminalError();
+                        }
+                    }
+                } else {
+                    pushLog("[CLASSE]", "ACH");
+                    nonTerminalError();
+                }
+            }
+        } else {
+            pushLog("[CLASSE]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[CLASSE]", "class");
+        nonTerminalError();
+    }
+
+    pushLog("[CLASSE]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int PEXP2() {
+    nonTerminalStart();
+
+    //PEXP . ID '(' [EXPS] ')'    
+    if (lookahead("PONTO") ) {
+        if (lookahead("id") ) {
+            if (lookahead("AP") ) {
+                if ( EXP() ) {
+                    if (lookahead("FP") ) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[PEXP2]", "FP");
+                        nonTerminalError();
+                    }
+                } else {
+                    pushLog("[PEXP2]", "<TENTATIVA EXP(9)>");
+                    nonTerminalError();
+                }
+            } else {
+                pushLog("[PEXP2]", "AP");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[PEXP2]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[PEXP2]", "PONTO");
+        nonTerminalError();
+    }
+
+    pushLog("[PEXP2]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int  PEXP() {
+    nonTerminalStart();
+    
+    if (lookahead("id") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "id");
+        nonTerminalError();
+    }
+
+    //this
+    if (lookahead("id") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "id");
+        nonTerminalError();
+    }
+    //new id ( ) . id ( exp )
+    if (lookahead("new") ) {
+        if (lookahead("id") ) {
+            if (lookahead("AP") ) {
+                if (lookahead("FP") ) {
+                    if ( PEXP2() ) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[PEXP]", "<TENTATIVA PEXP2()>");
+                        nonTerminalError();
+                    }
+                } else {
+                    pushLog("[PEXP]", "FP");
+                    nonTerminalError();
+                }
+            } else {
+                pushLog("[PEXP]", "AP");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[PEXP]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[PEXP]", "new");
+        nonTerminalError();
+    }
+
+    //new id ( )
+    if (lookahead("new") ) {
+        if (lookahead("id") ) {
+            if (lookahead("AP") ) {
+                if (lookahead("FP") ) {
+                    return nonTerminalAccept();
+                } else {
+                    pushLog("[PEXP]", "FP");
+                    nonTerminalError();
+                }
+            } else {
+                pushLog("[PEXP]", "AP");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[PEXP]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[PEXP]", "new");
+        nonTerminalError();
+    }
+
+
+    pushLog("[PEXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int SEXP() {
+    nonTerminalStart();
+    
+    if (lookahead("true") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "true");
+        nonTerminalError();
+    }
+
+    //false
+    if (lookahead("false") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "false");
+        nonTerminalError();
+    }
+    //num
+    if (lookahead("num") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "num");
+        nonTerminalError();
+    }
+    //null
+    if (lookahead("null") ) {
+        return nonTerminalAccept();
+    } else {
+        pushLog("[SEXP]", "null");
+        nonTerminalError();
+    }
+    //new int [ EXP ]
+    if (lookahead("new") ) {
+        if (lookahead("int") ) {
+            if (lookahead("AC") ) {
+                if (EXP()) {
+                    if (lookahead("FC")) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[SEXP]", "FC");
+                        nonTerminalError();
+                    }                
+                } else {
+                    pushLog("[SEXP]", "<TENTATIVA EXP(8)>");
+                    nonTerminalError();
+                }                    
+            } else {
+                pushLog("[SEXP]", "AC");
+                nonTerminalError();
+            }                
+        } else {
+            pushLog("[SEXP]", "int");
+            nonTerminalError();
+        }            
+    } else {
+        pushLog("[SEXP]", "new");
+        nonTerminalError();
+    }
+    //PEXP [ EXP ]
+    /*if ( PEXP() ) {
+        if (lookahead("AC") ) {
+            if ( EXP() ) {
+                if (lookahead("FC")) {
+
+                } else {
+                    pushLog("[SEXP]", "FC");
+                    nonTerminalError();                    
+                }
+            } else {
+                pushLog("[SEXP]", "null");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[SEXP]", "null");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[SEXP]", "null");
+        nonTerminalError();
+    }
+    */
+
+    pushLog("[SEXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int MEXP() {
+    nonTerminalStart();
+    //ID OU NUM * ID OU NUM
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("MULT")) {
+            if (lookahead("id")  || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[MEXP]", "[1] id ou num");
+                nonTerminalError();
+            }   
+        } else {
+            pushLog("[MEXP]", "MULT");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[MEXP]", "[2] id ou num");
+        nonTerminalError();
+    }
+
+
+    pushLog("[MEXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int AEXP() {
+    nonTerminalStart();
+    //ID OU NUM + ID OU NUM
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("PLUS")) {
+            if (lookahead("id")  || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[AEXP-1]", "[1] id ou num");
+                nonTerminalError();
+            }   
+        } else {
+            pushLog("[AEXP-1]", "PLUS");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[AEXP-1]", "[2] id ou num");
+        nonTerminalError();
+    }
+
+    //ID OU NUM - ID OU NUM
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("MINUS")) {
+            if (lookahead("id")  || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[AEXP-2]", "[3] id ou num");
+                nonTerminalError();
+            }   
+        } else {
+            pushLog("[AEXP-2]", "MINUS");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[AEXP-2]", "[4] id ou num");
+        nonTerminalError();
+    }
+
+    pushLog("[AEXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int REXP() {
+    nonTerminalStart();
+    //REXP < AEXP
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("LT")) {
+            if (lookahead("id")  || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[REXP-1]", "[5]id ou num");
+                nonTerminalError();
+            }   
+        } else {
+            pushLog("[REXP-1]", "LT");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[REXP-1]", "[6]id ou num");
+        nonTerminalError();
+    }
+
+    //REXP == AEXP
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("LT")) {
+            if (lookahead("id") || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[REXP-2]", "[1] id ou num");
+                nonTerminalError();      
+            }   
+        } else {
+            pushLog("[REXP-2]", "LT");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[REXP-2]", "[2]id ou num");
+        nonTerminalError();
+    }
+
+    //REXP != AEXP
+    if (lookahead("id") || lookahead("num") ) {
+        if (lookahead("DIF")) {
+            if (lookahead("id") || lookahead("num")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[REXP-3]", "[3] id ou num");
+                nonTerminalError();      
+            }   
+        } else {
+            pushLog("[REXP-3]", "LT");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[REXP-3]", "[4]id ou num");
+        nonTerminalError();
+    }
+
+    pushLog("[REXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
 }
 int EXP() {
     nonTerminalStart();
     if (REXP()) {
         return nonTerminalAccept();        
     }
+    if (AEXP()) {
+        return nonTerminalAccept();        
+    }
+    if (MEXP()) {
+        return nonTerminalAccept();        
+    }
+    if (SEXP()) {
+        return nonTerminalAccept();        
+    }
+    if (PEXP()) {
+        return nonTerminalAccept();        
+    }
+
 
     pushLog("[EXP]", "<nenhuma das derivacoes foi identificada>");
     return nonTerminalRefuse();
@@ -757,6 +1220,8 @@ int MAIN() {
         pushLog("[MAIN]", "class");
         return nonTerminalRefuse();
     }
+
+
     
 }
 
@@ -764,11 +1229,22 @@ int PROG() {
     nonTerminalStart();
 
     if (MAIN()){
+        printf("\t\t\tTESTANDO FUUUUUCK\n");
+        if (CLASSE()) {
+            return nonTerminalAccept();    
+        }
+    } else {
+        pushLog("[PROG]", "CLASSE()");
+        return nonTerminalRefuse();
+    } 
+
+    if (MAIN()) {
         return nonTerminalAccept();
     } else {
         pushLog("[PROG]", "MAIN()");
         return nonTerminalRefuse();
     }
+
 }
 
 void AnalisadorSintatico(){
