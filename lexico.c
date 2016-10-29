@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #define BUFFER 4196
+#define TRUE 1
+#define FALSE 0
+
 char str[BUFFER];
 char str3[BUFFER];
 
@@ -11,7 +14,7 @@ int  idxIdentifiedStringVector=0;
 char tokenKey[2048][30];
 char tokenValue[2048][30];
 int  idxToken=0;
-int  idxNextToken=0;
+int  idxTempToken=0;
 
 static const char TOKEN_FILE[] = "token.txt";
 static const char SOURCE_FILE[] = "file.txt";
@@ -48,9 +51,7 @@ int main() {
         addRecognizedToken(spreadTokenKeyValue(pch,0),spreadTokenKeyValue(pch,1));
         pch = strtok(NULL, " ");
     }
-	//printRecognizedToken();    
     AnalisadorSintatico();
-
 	return 0;
 }
 
@@ -77,31 +78,31 @@ void printRecognizedToken() {
 *******************************************/
 const char* getRecognizedKeyToken(){
     char *tokenKey1 = malloc(30);
-    strcpy(tokenKey1,tokenKey[idxNextToken]);
+    strcpy(tokenKey1,tokenKey[idxTempToken]);
 	return tokenKey1;
 }
 
 const char* getRecognizedValueToken(){
     char *tokenValue1 = malloc(30);
-    strcpy(tokenValue1,tokenValue[idxNextToken]);
+    strcpy(tokenValue1,tokenValue[idxTempToken]);
     return tokenValue1;
 }
 /*******************************************
     get next
 *******************************************/
 void nextRecognizedKeyToken (){
-    if (idxNextToken>=idxToken){
+    if (idxTempToken>=idxToken){
 		printf("Iterei ate o limite");
         return;
     }
 
     char *tokenKeyValye =malloc(100);
-    strcpy(tokenKeyValye,tokenKey[idxNextToken]);
+    strcpy(tokenKeyValye,tokenKey[idxTempToken]);
     strcat(tokenKeyValye," | ");
-    strcat(tokenKeyValye,tokenValue[idxNextToken]);
+    strcat(tokenKeyValye,tokenValue[idxTempToken]);
     
-    printf("\tindex: %d -> %s\n",idxNextToken, tokenKeyValye);
-    idxNextToken++;
+    printf("\tindex: %d -> %s\n",idxTempToken, tokenKeyValye);
+    idxTempToken++;
 
 }
 
@@ -309,383 +310,477 @@ void readToken() {
 }
 
 /*******************************************
-    Sintaxe
+    Pilha de controle para posicao do vetor
+    de tokens reconhecidos
 *******************************************/
-int pilhaOrigem[100];
-int idxPilha=0;
+int idxStack=0;
 
-void push(int x) {
-    pilhaOrigem[idxPilha] = x;
-    idxPilha++;
+struct Stack {
+   int start;
+   int current;
+};
+
+struct Stack stack[10];
+
+
+/*******************************************
+    Pilha para log de mensagens
+*******************************************/
+int idxStackLog=0;
+int idxStackLogPop=0;
+
+struct StackLog {
+   char mensagem[2048];
+   int current;
+};
+struct StackLog stackLog[100];
+
+void pushLog(char* funcao, char* esperado) {
+    char  mensagemFinal[2048];
+
+    strcpy(mensagemFinal,funcao);
+    strcat(mensagemFinal," Esperado ");
+    strcat(mensagemFinal,esperado);
+    strcat(mensagemFinal,". Recebido ");
+    strcat(mensagemFinal,tokenKey[getCurrentPosOnStack()]);    
+    strcpy(stackLog[idxStackLog].mensagem,mensagemFinal);
+    stackLog[idxStackLog].current = getCurrentPosOnStack();
+    
+    idxStackLog++;
 }
 
-int pop() {
-    int ret;
-    if (idxPilha<0) {
-        printf("deu ruim na pilha\n");
-        return 2;
+int popLog(){        
+    if (idxStackLogPop==idxStackLog){
+        return FALSE;
+    }
+    char currentTempString[30];
+    sprintf(currentTempString, "%d", stackLog[idxStackLogPop].current);
+
+    char  mensagemFinal[2048];
+    strcpy(mensagemFinal,"Posicao ");
+    strcat(mensagemFinal,currentTempString);
+    strcat(mensagemFinal,": ");
+    strcat(mensagemFinal,stackLog[idxStackLogPop].mensagem);
+    idxStackLogPop++;
+    printf("%s\n",mensagemFinal );
+    return TRUE;
+}
+
+/*******************************************
+    Pilha de controle para posicao do vetor
+    de tokens reconhecidos
+*******************************************/
+int match(char* tk, char* word){
+    if (strcmp(tk,word)==0) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+
+void update(int newvalue) {
+    printf("update - current %d\n",newvalue);
+    stack[idxStack].current=newvalue;
+}
+
+void increment() {
+    //printf("increment - atualizando current para %d\n",stack[idxStack].current+1 );
+    stack[idxStack].current=stack[idxStack].current+1;
+
+}
+
+void push(int vstart, int vcurrent ) {    
+    idxStack++;
+    printf("push \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n ",vstart,vcurrent,idxStack );
+    stack[idxStack].start=vstart;
+    stack[idxStack].current=vcurrent;
+
+    
+}
+
+void pop() {
+    if (idxStack<1) {
+        printf("[ERRO]deu ruim na pilha\n");
         exit(-1);
     }
-
-    ret = pilhaOrigem[idxPilha];
-    idxPilha--;
-    return ret;
+    //printf("pop - retirado idxStack %d da pilha\n",idxStack );
+    idxStack--;
 }
 
-void AnalisadorSintatico() {
-    int CMDfechaChaves=0;
-    int MAINfechaChaves=0;
-    int METODOfechaChaves=0;
+int getCurrentPosOnStack(){
+    return stack[idxStack].current;
+}
 
 
-    enum origem {Main = 1, Classe, Cmd, Metodo } orig;
+int lookahead(char* word) {
 
-    goto MAIN;
-
-    INICIO: 
-
-    orig=pop();
-    printf("valor da pilha %d | valor do index %d\n",orig, idxNextToken );
-    switch(orig) {
-        case Main:
-            goto MAIN_FIM;
-        break;
-
-        case Classe:
-            goto CLASSE;
-        break;
-
-        case Cmd:
-            goto CMD;
-        break;
-
-        case Metodo:
-            goto METODO_FIM;
-
-        break;
+    if (match(tokenKey[getCurrentPosOnStack()],word)) {
+        printf("LIDO: %s\n",tokenKey[getCurrentPosOnStack()] );
+        increment();
+        return TRUE;
+    } else {
+        printf("ESPERADO: %s | LIDO %s\n",word,tokenKey[getCurrentPosOnStack()] );
+        return FALSE;
     }
-    
-    goto INICIO;
+}
 
-	CLASSE: 
-    printf("INICIANDO LEITURA CLASSE\n");
-		if (strcmp(getRecognizedKeyToken(),"class")==0) {
-			nextRecognizedKeyToken();
-			if (strcmp(getRecognizedKeyToken(),"id")==0) {
-				nextRecognizedKeyToken();
-                if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
-                    goto METODO;
+void nonTerminalStart() {
+    push(stack[idxStack].current,stack[idxStack].current);
+}
+
+void nonTerminalError() {
+    pop();
+    push(stack[idxStack].current,stack[idxStack].current);
+}
+
+int nonTerminalRefuse() {
+    pop();
+    return FALSE;
+}
+
+int nonTerminalAccept() {
+    int newCurrentPosition=getCurrentPosOnStack();
+    pop();
+    update(newCurrentPosition);
+
+    return TRUE;
+}
+
+int REXP() {
+    return FALSE;
+}
+int EXP() {
+    nonTerminalStart();
+    if (REXP()) {
+        return nonTerminalAccept();        
+    }
+
+    pushLog("[EXP]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+}
+
+int CMD() {
+    nonTerminalStart();
+
+    //'{' {CMD} '}'
+    if (lookahead("ACH")) {
+        if (lookahead("ACH")) {
+            if (CMD()) {
+                if (lookahead("FCH")) {
+                    if (lookahead("FCH")) {
+
+                    } else {
+                        pushLog("[CMD-1]", "FCH");
+                        return nonTerminalRefuse();
+                    }
                 } else {
-                    printf("[ERRO SINTATICO][17] Esperado ACH. Encontrado %s\n",getRecognizedKeyToken());
-                } 
-			} else {
-				printf("[ERRO SINTATICO][16] Esperado id. Encontrado %s\n",getRecognizedKeyToken());
-			}
-		} else {
-			printf("[ERRO SINTATICO][15] Esperado class. Encontrado %s\n",getRecognizedKeyToken());
-			
-		}
-//CMD
-    CMD:
-    printf("INICIANDO LEITURA CMD\n");
-    if (CMDfechaChaves>0 && strcmp(getRecognizedKeyToken(),"FCH")==0){
-        nextRecognizedKeyToken();
-        printf("CMD - fechei uma chaves\n");
-        goto INICIO;
+                        pushLog("[CMD-1]", "FCH");
+                        return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-1]", "<TENTATIVA CMD(1)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-1]", "ACH");
+            return nonTerminalRefuse();
+        }
+    } 
+    //if '(' EXP ')' CMD else CMD
+    if (lookahead("if")) {
+        if (lookahead("AP")) {
+            if (EXP()) {
+                if (lookahead("FP")) {
+                    if (CMD()) {
+                        if (lookahead("else")) {
+                            if (CMD()) {
+                                return nonTerminalAccept();
+                            } else {
+                                pushLog("[CMD-2]", "<TENTATIVA CMD(2)>");
+                                return nonTerminalRefuse();
+                            }
+                        } else {
+                            pushLog("[CMD-2]", "else");
+                            return nonTerminalRefuse();
+                        }
+                    } else {
+                        pushLog("[CMD-2]", "<TENTATIVA CMD(3)>");
+                        return nonTerminalRefuse();
+                    }
+                } else {
+                    pushLog("[CMD-2]", "FP");
+                    return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-2]", "<TENTATIVA EXP(1)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-2]", "AP");
+            return nonTerminalRefuse();
+        }
+    } 
+    //if '(' EXP ')' CMD
+    if (lookahead("if")) {
+        if (lookahead("AP")) {
+            if (EXP()) {
+                if (lookahead("FCP")) {
+                    if (CMD()) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[CMD-3]", "<TENTATIVA CMD(4)>");
+                        return nonTerminalRefuse();
+                    }
+                } else {
+                        pushLog("[CMD-3]", "FCP");
+                        return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-3]", "<TENTATIVA EXP(2)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-3]", "AP");
+            return nonTerminalRefuse();
+        }
+    } 
+    //while '(' EXP ')' CMD
+    if (lookahead("while")) {
+        if (lookahead("AP")) {
+            if (EXP()) {
+                if (lookahead("FCP")) {
+                    if (CMD()) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[CMD-4]", "<TENTATIVA CMD(5)>");
+                        return nonTerminalRefuse();
+                    }
+                } else {
+                        pushLog("[CMD-4]", "FCP");
+                        return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-4]", "<TENTATIVA EXP(3)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-4]", "AP");
+            return nonTerminalRefuse();
+        }
     }
-    if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
-        CMDfechaChaves++;
-        nextRecognizedKeyToken();
-        STMT:
-        if (strcmp(getRecognizedKeyToken(),"System.out.println")==0) {
-            nextRecognizedKeyToken();
-            if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-                nextRecognizedKeyToken();
-                if (strcmp(getRecognizedKeyToken(),"new")==0) {
-                    nextRecognizedKeyToken();
-                    if (strcmp(getRecognizedKeyToken(),"id")==0) {
-                        nextRecognizedKeyToken();
-                        if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-                            nextRecognizedKeyToken();
-                            if (strcmp(getRecognizedKeyToken(),"FP")==0) {
-                                nextRecognizedKeyToken();
-                                if (strcmp(getRecognizedKeyToken(),"PONTO")==0) {
-                                    nextRecognizedKeyToken();
-                                    if (strcmp(getRecognizedKeyToken(),"id")==0) {
-                                        nextRecognizedKeyToken();
-                                        if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-                                            nextRecognizedKeyToken();
-                                            if (strcmp(getRecognizedKeyToken(),"num")==0) {
-                                                nextRecognizedKeyToken();
-                                                if (strcmp(getRecognizedKeyToken(),"FP")==0) {
-                                                    nextRecognizedKeyToken();
-                                                    if (strcmp(getRecognizedKeyToken(),"FP")==0) {
-                                                        nextRecognizedKeyToken();
-                                                        if (strcmp(getRecognizedKeyToken(),"PV")==0) {
-                                                            nextRecognizedKeyToken();
-                                                            goto CMD;
+    //System.out.println '(' EXP ')' ;
+    if (lookahead("System.out.println")) {
+        if (lookahead("AP")) {
+            if (EXP()) {
+                if (lookahead("FP")) {
+                    if (lookahead("PV")) {
+                        return nonTerminalAccept();
+                    } else {
+                        pushLog("[CMD-5]", "PV");
+                        return nonTerminalRefuse();                    
+                    }
+                } else {
+                    pushLog("[CMD-5]", "FP");
+                    return nonTerminalRefuse();                    
+                }
+            } else {
+                pushLog("[CMD-5]", "<TENTATIVA EXP(4)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-5]", "AP");
+            return nonTerminalRefuse();
+        }
+    } 
+    //ID = EXP ;
+    if (lookahead("id")) {
+        if (lookahead("ATR")) {
+            if (EXP()) {
+                if (lookahead("PV")) {
+                    return nonTerminalAccept();
+                } else {
+                    pushLog("[CMD-6]", "PV");
+                    return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-6]", "<TENTATIVA EXP(5)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-6]", "ATR");
+            return nonTerminalRefuse();
+        }
+    } 
+    //ID '[' EXP ']' = EXP ;
+    if (lookahead("id")) {
+        if (lookahead("AC")) {
+            if (EXP()) {
+                if (lookahead("FC")) {
+                    if (lookahead("ATR")) {
+                        if (EXP()) {
+                            if (lookahead("PV")) {
+                                return nonTerminalAccept();
+                            } else {
+                                pushLog("[CMD-7]", "PV");
+                                return nonTerminalRefuse();                        
+                            }
+                        } else {
+                            pushLog("[CMD-7]", "<TENTATIVA EXP(6)>");
+                            return nonTerminalRefuse();                        
+                        }
+                    } else {
+                        pushLog("[CMD-6]", "ATR");
+                        return nonTerminalRefuse();                        
+                    }
+                } else {
+                    pushLog("[CMD-7]", "FC");
+                    return nonTerminalRefuse();
+                }
+            } else {
+                pushLog("[CMD-7]", "<TENTATIVA EXP(7)>");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-7]", "AC");
+            return nonTerminalRefuse();
+        }
+    }
+
+    pushLog("[CMD]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse();
+ 
+}
+
+int MAIN() {
+    nonTerminalStart();
+
+    if (lookahead("class")){
+        if (lookahead("id")) {
+            if (lookahead("ACH")) {
+                if (lookahead("public")) {
+                    if (lookahead("static")) {
+                        if (lookahead("void")) {
+                            if (lookahead("main")) {
+                                if (lookahead("AP")) {
+                                    if (lookahead("id")) {
+                                        if (lookahead("AC")) {
+                                            if (lookahead("FC")) {
+                                                if (lookahead("id")) {
+                                                    if (lookahead("FP")) {
+                                                        if (lookahead("ACH")) {
+                                                            if (CMD()) {
+                                                                if (lookahead("FCH")) {
+                                                                    if (lookahead("FCH")) {
+                                                                        return nonTerminalAccept();
+                                                                    } else {
+                                                                        //FCH
+                                                                        pushLog("[MAIN]", "FCH");
+                                                                        return nonTerminalRefuse();
+                                                                    }
+                                                                } else {
+                                                                    //FCH
+                                                                    pushLog("[MAIN]", "FCH");
+                                                                    return nonTerminalRefuse();                                                                    
+                                                                }
+                                                            } else {
+                                                                //FP
+                                                                pushLog("[MAIN]", "CMD()");
+                                                                return nonTerminalRefuse();
+                                                            }
                                                         } else {
-                                                            printf("[ERRO SINTATICO][30] Esperado PV. Encontrado  %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                                                        }                                                                                                                
+                                                            //ACH
+                                                            pushLog("[MAIN]", "ACH");
+                                                            return nonTerminalRefuse();                                                            
+                                                        }
                                                     } else {
-                                                        printf("[ERRO SINTATICO][29] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                                        //FP
+                                                        pushLog("[MAIN]", "FP");
+                                                        return nonTerminalRefuse();                                                        
                                                     }
                                                 } else {
-                                                    printf("[ERRO SINTATICO][28] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                                    //id
+                                                    pushLog("[MAIN]", "id");
+                                                    return nonTerminalRefuse();                                                    
                                                 }
                                             } else {
-                                                printf("[ERRO SINTATICO][27] Esperado num. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                                //FC
+                                                pushLog("[MAIN]", "FC");
+                                                return nonTerminalRefuse();                                                
                                             }
                                         } else {
-                                            printf("[ERRO SINTATICO][26] Esperado AP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                            //AC
+                                            pushLog("[MAIN]", "AC");
+                                            return nonTerminalRefuse();                                            
                                         }
-                                    } else { 
-                                        printf("[ERRO SINTATICO][25] Esperado id. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                    } else {
+                                        //id
+                                        pushLog("[MAIN]", "id");
+                                        return nonTerminalRefuse();
                                     }
                                 } else {
-                                    printf("[ERRO SINTATICO][24] Esperado PONTO. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                                }
+                                    //AP
+                                    pushLog("[MAIN]", "AP");
+                                    return nonTerminalRefuse();                                     
+                                }                                
                             } else {
-                                printf("[ERRO SINTATICO][23] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                                //main
+                                pushLog("[MAIN]", "main");
+                                return nonTerminalRefuse();                                
                             }
                         } else {
-                            printf("[ERRO SINTATICO][22] Esperado AP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                        }
+                            //void
+                            pushLog("[MAIN]", "void");
+                            return nonTerminalRefuse();                            
+                        }                        
                     } else {
-                        printf("[ERRO SINTATICO][21] Esperado id. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                        //static
+                        pushLog("[MAIN]", "static");
+                        return nonTerminalRefuse();                         
                     }
                 } else {
-                    printf("[ERRO SINTATICO][20] Esperado new. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+                    //public
+                    pushLog("[MAIN]", "public");
+                    return nonTerminalRefuse();                    
                 }
             } else {
-                printf("[ERRO SINTATICO][19] Esperado AP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-            }
-        //DECLARACAO DE VARIAVEL(IS)
-        } else if (strcmp(getRecognizedKeyToken(),"if")==0)  {
-            nextRecognizedKeyToken();
-            if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-                nextRecognizedKeyToken();
-                COND:
-                if (strcmp(getRecognizedKeyToken(),"num")==0||strcmp(getRecognizedKeyToken(),"id")==0) {
-                    nextRecognizedKeyToken();
-                    if (strcmp(getRecognizedKeyToken(),"EQ")==0 || (strcmp(getRecognizedKeyToken(),"LT")==0) ) {
-                        nextRecognizedKeyToken();
-                        if (strcmp(getRecognizedKeyToken(),"num")==0||strcmp(getRecognizedKeyToken(),"id")==0) {
-                            nextRecognizedKeyToken();
-                            if (strcmp(getRecognizedKeyToken(),"AND")==0||strcmp(getRecognizedKeyToken(),"OR")==0) {
-                                nextRecognizedKeyToken();
-                                goto COND;
-                            } else if (strcmp(getRecognizedKeyToken(),"FP")==0) {
-                                nextRecognizedKeyToken();
-                                goto CMD; 
-                            } else {
-                                printf("[ERRO SINTATICO][34] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                            }
-                        } else {
-                            //esperava num
-                            printf("[ERRO SINTATICO][33] Esperado num. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                        }
-                    } else {
-                        //esperava comparacao
-                        printf("[ERRO SINTATICO][32] Esperado EQ, LT. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                    }
-                } else {
-                    //num
-                    printf("[ERRO SINTATICO][31] Esperado num. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                }
-            } else {
-                //AP
-                printf("[ERRO SINTATICO][30] Esperado AP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-            }
-                                                                   
-        }
-        // int
-        else if (strcmp(getRecognizedKeyToken(),"int")==0 ||strcmp(getRecognizedKeyToken(),"boolean")==0)  {
-            nextRecognizedKeyToken();
-            if (strcmp(getRecognizedKeyToken(),"id")==0)  {
-                nextRecognizedKeyToken();
-                if (strcmp(getRecognizedKeyToken(),"PV")==0) {
-                    nextRecognizedKeyToken();
-                    goto STMT;
-                }
-            } else {
-                //id
-                printf("[ERRO SINTATICO][42] Esperado PV. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-            }
-        }
-        //atribuicao
-        else if (strcmp(getRecognizedKeyToken(),"id")==0) {
-            nextRecognizedKeyToken();
-            if (strcmp(getRecognizedKeyToken(),"ATR")==0) {
-                nextRecognizedKeyToken();
-                if (strcmp(getRecognizedKeyToken(),"id")==0||strcmp(getRecognizedKeyToken(),"num")==0) {
-                    nextRecognizedKeyToken();
-                    if (strcmp(getRecognizedKeyToken(),"PV")==0) {
-                        nextRecognizedKeyToken();
-                        goto STMT;
-                    } else {
-                        //;                        
-                        printf("[ERRO SINTATICO][44] Esperado PV. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                    }
-                } else {
-                    //variavel ou num
-                    printf("[ERRO SINTATICO][43] Esperado id , num. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                }
-            } else {
-                //esperado sinal de igual
-                printf("[ERRO SINTATICO][42] Esperado ATR. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-            }
-        } else if (strcmp(getRecognizedKeyToken(),"else")==0) {
-            nextRecognizedKeyToken();             
-            goto CMD;
-        }
-            
-        //} 
-        // FECHA CHAVES AQUI
-        else if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
-            nextRecognizedKeyToken();
-            goto CMD;
-        } else {
-            printf("[ERRO SINTATICO][99] Esperado FP CMD. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-        }
-        
-    }//CMD FINALIZA AQUI
+                //ACH
+                pushLog("[MAIN]", "ACH");
+                return nonTerminalRefuse();                
 
-    METODO:
-        printf("INICIANDO LEITURA METODO\n");
-        //if (METODOfechaChaves>0 && strcmp(getRecognizedKeyToken(),"FCH")==0){
-        //    nextRecognizedKeyToken();
-        //    printf("METODO - fechei uma chaves\n");
-        //    goto INICIO;
-        //}
-        if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
-            nextRecognizedKeyToken();
-            if (strcmp(getRecognizedKeyToken(),"public")==0) {
-                nextRecognizedKeyToken();
-                if (strcmp(getRecognizedKeyToken(),"int")==0||strcmp(getRecognizedKeyToken(),"boolean")==0) {
-                    nextRecognizedKeyToken();
-                    if (strcmp(getRecognizedKeyToken(),"id")==0) {
-                        nextRecognizedKeyToken();
-                        if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-                            nextRecognizedKeyToken();
-                            if (strcmp(getRecognizedKeyToken(),"int")==0||strcmp(getRecognizedKeyToken(),"boolean")==0) {
-                                nextRecognizedKeyToken();
-                                if (strcmp(getRecognizedKeyToken(),"id")==0) {
-                                    nextRecognizedKeyToken();
-                                    if (strcmp(getRecognizedKeyToken(),"FP")==0) {
-                                        nextRecognizedKeyToken();
-
-                                        push(4);
-                                        goto CMD;
-                                        METODO_FIM:
-                                        if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
-                                            nextRecognizedKeyToken();
-                                            goto INICIO;
-                                        }
-                                    }
-                                } else {
-                                    //fp
-                                    printf("[ERRO SINTATICO][41] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                                }
-                            } else {
-                                //boolean int
-                                printf("[ERRO SINTATICO][40] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                            }
-                        } else {
-                            //ap
-                            printf("[ERRO SINTATICO][39] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                        }
-                    } else {
-                        //id
-                        printf("[ERRO SINTATICO][38] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                    }
-                } else {
-                    //boolean ou int
-                    printf("[ERRO SINTATICO][37] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-                }
-            } else {
-                //public
-                printf("[ERRO SINTATICO][36] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
             }
         } else {
-            //ach
-            printf("[ERRO SINTATICO][35] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
+            pushLog("[MAIN]", "id");
+            return nonTerminalRefuse();
         }
-
-    MAIN: 
-        printf("INICIANDO LEITURA MAIN\n");
-		if (strcmp(getRecognizedKeyToken(),"class")==0) {
-			nextRecognizedKeyToken();
-			if (strcmp(getRecognizedKeyToken(),"id")==0) {
-				nextRecognizedKeyToken();
-				if (strcmp(getRecognizedKeyToken(),"ACH")==0) {
-                    nextRecognizedKeyToken();
-					if (strcmp(getRecognizedKeyToken(),"public")==0) {
-						nextRecognizedKeyToken();
-						if (strcmp(getRecognizedKeyToken(),"static")==0)  {
-							nextRecognizedKeyToken();
-							if (strcmp(getRecognizedKeyToken(),"void")==0) {
-								nextRecognizedKeyToken();
-								if (strcmp(getRecognizedKeyToken(),"main")==0) {
-									nextRecognizedKeyToken();
-									if (strcmp(getRecognizedKeyToken(),"AP")==0) {
-										nextRecognizedKeyToken();
-										if (strcmp(getRecognizedKeyToken(),"id")==0) {
-											nextRecognizedKeyToken();
-											if (strcmp(getRecognizedKeyToken(),"AC")==0) {
-												nextRecognizedKeyToken();
-												if (strcmp(getRecognizedKeyToken(),"FC")==0) {
-													nextRecognizedKeyToken();
-													if (strcmp(getRecognizedKeyToken(),"FP")==0){
-														nextRecognizedKeyToken();
-                                                        push(1);
-                                                        goto CMD; 
-                                                        MAIN_FIM:
-                                                        if (strcmp(getRecognizedKeyToken(),"FCH")==0) {
-                                                            nextRecognizedKeyToken();
-                                                            printf("MAIN - ENCERRANDO\n");
-                                                            goto INICIO;
-                                                        }
-
-													} else {														
-														printf("[ERRO SINTATICO][12] Esperado FP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-													}
-												} else {
-													printf("[ERRO SINTATICO][11] Esperado FC. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-												}
-											} else {
-												printf("[ERRO SINTATICO][10] Esperado AC. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-											}
-										} else {
-											printf("[ERRO SINTATICO][9] Esperado id. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-										}
-									} else {
-										printf("[ERRO SINTATICO][8] Esperado AP. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-									}
-								} else {
-									printf("[ERRO SINTATICO][7] Esperado main. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-								}
-							} else {
-								printf("[ERRO SINTATICO][6] Esperado void. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-							}
-						} else {
-							printf("[ERRO SINTATICO][5] Esperado static. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-						}
-					} else {
-						printf("[ERRO SINTATICO][4] Esperado public. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-					}
-				} else {
-					printf("[ERRO SINTATICO][3] Esperado ACH. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-				}
-			} else {
-				printf("[ERRO SINTATICO][2] Esperado id. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-			}
-		} else {
-			printf("[ERRO SINTATICO][1] Esperado class. Encontrado %s , %s\n",getRecognizedKeyToken(),getRecognizedValueToken());
-		}
-        printf("FIM %s , %s - %d \n", getRecognizedKeyToken(),getRecognizedValueToken(), idxNextToken);    
+    } else {
+        pushLog("[MAIN]", "class");
+        return nonTerminalRefuse();
+    }
+    
 }
 
+int PROG() {
+    nonTerminalStart();
+
+    if (MAIN()){
+        return nonTerminalAccept();
+    } else {
+        pushLog("[PROG]", "MAIN()");
+        return nonTerminalRefuse();
+    }
+}
+
+void AnalisadorSintatico(){
+    if (PROG()) {
+        printf("LEITUTRA SINTATIC OK\n");
+    } else {
+        printf("/**************************************\n\tPILHA DE ERRO\n*************************************/\n");
+        while (popLog()) {
+            NULL;
+        }
+    }
+}
 
 /*******************************************
 	Biblioteca de TOKENs
