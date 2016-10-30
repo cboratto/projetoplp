@@ -392,7 +392,7 @@ void increment() {
 
 void push(int vstart, int vcurrent ) {    
     idxStack++;
-    printf("push \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n ",vstart,vcurrent,idxStack );
+    printf("push \n\tstart: %d\n\tcurrent: %d\n\tidxStack: %d\n",vstart,vcurrent,idxStack );
     stack[idxStack].start=vstart;
     stack[idxStack].current=vcurrent;
 
@@ -400,7 +400,7 @@ void push(int vstart, int vcurrent ) {
 }
 
 void pop() {
-    //printf("pop - retirado idxStack %d da pilha\n",idxStack );
+    //printf("pop %d \n",idxStack );
     if (idxStack<0) {
         printf("[ERRO]deu ruim na pilha\n");
         exit(-1);
@@ -420,7 +420,7 @@ int lookahead(char* word) {
         increment();
         return TRUE;
     } else {
-        printf("ESPERADO: %s | LIDO %s\n",word,tokenKey[getCurrentPosOnStack()] );
+        //printf("ESPERADO: %s | LIDO %s\n",word,tokenKey[getCurrentPosOnStack()] );
         return FALSE;
     }
 }
@@ -445,6 +445,24 @@ int nonTerminalAccept() {
     update(newCurrentPosition);
 
     return TRUE;
+}
+
+
+int PARAMS() {
+
+    nonTerminalStart();
+
+    if (lookahead("int") ||lookahead("boolean") ) {
+        if (lookahead("id") ) {
+            return nonTerminalAccept();
+        } else {
+            pushLog("[PARAMS]", "id");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[PARAMS]", "int ou boolean");
+        nonTerminalError();
+    }
 }
 
 int VAR() {
@@ -487,20 +505,51 @@ int VAR() {
     return nonTerminalRefuse();
 }
 
-int PARAMS() {
-    return FALSE;
-}
 
 int METODO () {
     nonTerminalStart();
-    printf("\t\t\t\t\tTESTANDO METODO \n");
     if (lookahead("public") ) {
         if (lookahead("int") || lookahead("boolean")  ) {
             if (lookahead("id") ) {
                 if (lookahead("AP") ) {
                     if (PARAMS() ) {
                         if (lookahead("FP") ) {
-                            return nonTerminalAccept();
+                            if (lookahead("ACH") ) {
+                                METODO_VAR:
+                                if (VAR() ) {
+                                    goto METODO_VAR;
+                                } else {
+                                    if (CMD()) {
+                                        if (lookahead("return") ) {
+                                            if (EXP() ) {
+                                                if (lookahead("PV") ) {
+                                                    if (lookahead("FCH") ) {
+                                                        return nonTerminalAccept();
+                                                    } else {
+                                                        pushLog("[METODO]", "FCH");
+                                                        nonTerminalError();
+                                                    }
+                                                } else {
+                                                    pushLog("[METODO]", "PV");
+                                                    nonTerminalError();
+                                                }
+                                            } else {
+                                                pushLog("[METODO]", "<TENTATIVA EXP()>");
+                                                nonTerminalError();
+                                            }
+                                        } else {
+                                            pushLog("[METODO]", "return");
+                                            nonTerminalError();
+                                        }
+                                    } else {
+                                        pushLog("[METODO]", "<TENTATIVA CMD()>");
+                                        nonTerminalError();
+                                    }
+                                }
+                            } else {
+                                pushLog("[METODO]", "FP");
+                                nonTerminalError();
+                            }
                         } else {
                             pushLog("[METODO]", "FP");
                             nonTerminalError();
@@ -618,18 +667,40 @@ int PEXP2() {
 int  PEXP() {
     nonTerminalStart();
     
+    if (lookahead("AP") ) {
+        if (PEXP() ) {
+            if (lookahead("FP") ) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[PEXP]", "<FP");
+                nonTerminalError();
+            }
+        } else {
+            pushLog("[PEXP]", "<TENTATIVA PEXP(99)>");
+            nonTerminalError();
+        }
+    } else {
+        pushLog("[PEXP]", "AP");
+        nonTerminalError();
+    }
+
     if (lookahead("id") ) {
         return nonTerminalAccept();
     } else {
-        pushLog("[SEXP]", "id");
+        pushLog("[PEXP]", "id");
         nonTerminalError();
     }
 
     //this
-    if (lookahead("id") ) {
-        return nonTerminalAccept();
+    if (lookahead("this") ) {
+        if (PEXP2() ) {
+            return nonTerminalAccept(); 
+        } else {
+            pushLog("[PEXP]", "PEXP2(2)");
+            nonTerminalError();            
+        }
     } else {
-        pushLog("[SEXP]", "id");
+        pushLog("[PEXP]", "this");
         nonTerminalError();
     }
     //new id ( ) . id ( exp )
@@ -794,6 +865,22 @@ int MEXP() {
         nonTerminalError();
     }
 
+    if (lookahead("id") ) {
+        if (lookahead("MULT")) {
+            if ( PEXP() ) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[MEXP]", "[1] id ou num");
+                nonTerminalError();
+            }   
+        } else {
+            pushLog("[MEXP]", "MULT");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[MEXP]", "[2] id ou num");
+        nonTerminalError();
+    }
 
     pushLog("[MEXP]", "<nenhuma das derivacoes foi identificada>");
     return nonTerminalRefuse();
@@ -918,7 +1005,6 @@ int EXP() {
         return nonTerminalAccept();        
     }
 
-
     pushLog("[EXP]", "<nenhuma das derivacoes foi identificada>");
     return nonTerminalRefuse();
 }
@@ -928,25 +1014,15 @@ int CMD() {
 
     //'{' {CMD} '}'
     if (lookahead("ACH")) {
-        if (lookahead("ACH")) {
-            if (CMD()) {
-                if (lookahead("FCH")) {
-                    if (lookahead("FCH")) {
-
-                    } else {
-                        pushLog("[CMD-1]", "FCH");
-                        return nonTerminalRefuse();
-                    }
-                } else {
-                        pushLog("[CMD-1]", "FCH");
-                        return nonTerminalRefuse();
-                }
+        if (CMD()) {
+            if (lookahead("FCH")) {
+                return nonTerminalAccept();
             } else {
-                pushLog("[CMD-1]", "<TENTATIVA CMD(1)>");
-                return nonTerminalRefuse();
+                    pushLog("[CMD-1]", "FCH");
+                    return nonTerminalRefuse();
             }
         } else {
-            pushLog("[CMD-1]", "ACH");
+            pushLog("[CMD-1]", "<TENTATIVA CMD(1)>");
             return nonTerminalRefuse();
         }
     } 
@@ -1229,7 +1305,6 @@ int PROG() {
     nonTerminalStart();
 
     if (MAIN()){
-        printf("\t\t\tTESTANDO FUUUUUCK\n");
         if (CLASSE()) {
             return nonTerminalAccept();    
         }
