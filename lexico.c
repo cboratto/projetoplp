@@ -350,18 +350,18 @@ void pushLog(char* funcao, char* esperado) {
 }
 
 int popLog(){        
-    if (idxStackLogPop==idxStackLog){
+    if (idxStackLog==1){
         return FALSE;
     }
     char currentTempString[30];
-    sprintf(currentTempString, "%d", stackLog[idxStackLogPop].current);
+    sprintf(currentTempString, "%d", stackLog[idxStackLog].current);
 
     char  mensagemFinal[2048];
     strcpy(mensagemFinal,"Posicao ");
     strcat(mensagemFinal,currentTempString);
     strcat(mensagemFinal,": ");
-    strcat(mensagemFinal,stackLog[idxStackLogPop].mensagem);
-    idxStackLogPop++;
+    strcat(mensagemFinal,stackLog[idxStackLog].mensagem);
+    idxStackLog--;
     printf("%s\n",mensagemFinal );
     return TRUE;
 }
@@ -420,7 +420,7 @@ int lookahead(char* word) {
         increment();
         return TRUE;
     } else {
-        //printf("ESPERADO: %s | LIDO %s\n",word,tokenKey[getCurrentPosOnStack()] );
+        printf("ESPERADO: %s | LIDO %s\n",word,tokenKey[getCurrentPosOnStack()] );
         return FALSE;
     }
 }
@@ -519,7 +519,10 @@ int METODO () {
                                 if (VAR() ) {
                                     goto METODO_VAR;
                                 } else {
+                                    METODO_RETENTA_COMANDO: 
                                     if (CMD()) {
+                                        goto METODO_RETENTA_COMANDO;
+                                    } else {
                                         if (lookahead("return") ) {
                                             if (EXP() ) {
                                                 if (lookahead("PV") ) {
@@ -541,9 +544,6 @@ int METODO () {
                                             pushLog("[METODO]", "return");
                                             nonTerminalError();
                                         }
-                                    } else {
-                                        pushLog("[METODO]", "<TENTATIVA CMD()>");
-                                        nonTerminalError();
                                     }
                                 }
                             } else {
