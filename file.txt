@@ -1,36 +1,19 @@
-aaaaaa
-tvdfd
-if stmt then 
-a
-else 
-b
-1
-0
-2
-3
-4
-5
-6
-7
-8
-9
-12345
-1
-54321
-2
-<
-class teste extends teste { 
-public static void main ( ) { //adadsds / /
-//BBBBBBBBBB
-int a ;
-int b ;
-int var_123 ; // asahdhsdh
-boolean var_bool ;
-System.out.println ( ) ;
+ class factorial {  
+    public static void main ( string [ ] args ) {
+        System.out.println ( new fac ( ) . computefac ( 10 ) ) ;
+    }
 }
-/* testando
-adaojfsjfs
-dsdjd // aaa /*adshfjhf*/
-*/
+class fac {
 
+    public int computefac ( int num ) {
+        int num_aux ;
+        if ( num < 1 ) {
+            num_aux = 1 ; }
+        else {
+            num_aux = num * ( this . computefac ( num - 1 ) ) ;
+            }
+
+
+        return num_aux ;
+    }
 }
