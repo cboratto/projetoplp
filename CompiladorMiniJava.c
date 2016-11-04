@@ -20,7 +20,7 @@ static const char TOKEN_FILE[] = "token.txt";
 static const char SOURCE_FILE[] = "file.txt";
 
 const char* getRecognizedKeyToken ();
-const char* spreadTokenKeyValue(char *tk, int kv);
+ char* spreadTokenKeyValue(char *tk, int kv);
 void addRecognizedToken(char* key, char *value);
 void printRecognizedToken();
 void tokenLibrary(char * tk);
@@ -244,11 +244,13 @@ void read(char *filename) {
 /*******************************************
     Separa os tokens em key,value
 *******************************************/
-const char* spreadTokenKeyValue (char *tk, int kv) {
+ char* spreadTokenKeyValue (char *tk, int kv) {
     char *tokenKey = malloc(30);
     char *tokenValue = malloc(30);    
-    //memset(tokenKey,0, 2048);
-    //memset(tokenValue,0, 2048);
+	//Diretiva para WINDOWS
+	//memset adicionado para garantir que nao seja referenciado espacos de memorias pre alocados
+    memset(tokenKey,0, 30);
+    memset(tokenValue,0, 30);
     int antesVirgula=1;
     int i=0;
 
@@ -264,7 +266,8 @@ const char* spreadTokenKeyValue (char *tk, int kv) {
             if (antesVirgula==1) {
                 tokenKey[strlen(tokenKey)] = tk[i];
                 tokenKey[strlen(tokenKey)+1] = '\0';
-                printf("\n");
+				//strcat(tokenKey, tk[i]+0);
+                //printf("%s\n", tokenKey);
             } else {
                 tokenValue[strlen(tokenValue)] = tk[i];
                 tokenValue[strlen(tokenValue)+1] = '\0';
