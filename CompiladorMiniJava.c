@@ -264,6 +264,7 @@ const char* spreadTokenKeyValue (char *tk, int kv) {
             if (antesVirgula==1) {
                 tokenKey[strlen(tokenKey)] = tk[i];
                 tokenKey[strlen(tokenKey)+1] = '\0';
+                printf("\n");
             } else {
                 tokenValue[strlen(tokenValue)] = tk[i];
                 tokenValue[strlen(tokenValue)+1] = '\0';
