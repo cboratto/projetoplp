@@ -8,8 +8,12 @@
 char str[BUFFER];
 char str3[BUFFER];
 
-char identifiedStringsVector[128][30]; //128 posicoes com 30 caracteres cada
-int  idxIdentifiedStringVector=0;
+struct StructID {
+    char ID[128][30]; //128 posicoes com 30 caracteres cada
+    char type[128]; //(i)nt, (b)oolean, (m)ethod, (c)lass
+    int idx; //indice corrente;
+};
+struct StructID structID;
 
 char tokenKey[2048][30];
 char tokenValue[2048][30];
@@ -19,19 +23,37 @@ int  idxTempToken=0;
 static const char TOKEN_FILE[] = "token.txt";
 static const char SOURCE_FILE[] = "file.txt";
 
-const char* getRecognizedKeyToken ();
-char* spreadTokenKeyValue(char *tk, int kv);
-void addRecognizedToken(char* key, char *value);
+const char* getRecognizedTokenValueByIndex(int idx);
+const char* getRecognizedTokenKeyByIndex(int idx);
 void printRecognizedToken();
+void addRecognizedToken(char* key, char *value);
+
+char* spreadTokenKeyValue(char *tk, int kv);
 void tokenLibrary(char * tk);
-int identifiedStrings( char * id );
+
+/*******************************************
+  Funcoes de manipulacao da tabela de ID
+  reconhecidos pelo analisador lexico
+  Esta tabela é utilizada como base para 
+  identificacao de tipagem de variavel e funcoes
+ *******************************************/
+int convertTokenPositionToLexemaID(int idxTokenPosition);
+void printStructID();
+void printStructIDbyIDX(int idx);
+int addStructID(char * id );
+void setStructIDType(char vtype, int idx );
+
+
+char * getStructIDName(int idx);
 void removeCommentLine();
 void cleanTokenFile(char p);
-void write(char *tk);
-void read(char *filename);
+void write(const char *tk);
+void read( const char *filename);
 void readToken();
 void tokenLibrary(char * tk);
 
+void AnalisadorSintatico();
+void AnalisadorSemantico();
 
 int main() {
 	cleanTokenFile('c');
@@ -52,6 +74,8 @@ int main() {
 		pch = strtok(NULL, " ");
 	}
 	AnalisadorSintatico();
+    printStructID();
+    AnalisadorSemantico();
 	return 0;
 }
 
@@ -73,64 +97,60 @@ void printRecognizedToken() {
 		printf("%s/%s\n", tokenKey[i],tokenValue[i] );
 	}
 }
-/*******************************************
-  get next
- *******************************************/
-const char* getRecognizedKeyToken(){
-	char *tokenKey1 = malloc(30);
-	strcpy(tokenKey1,tokenKey[idxTempToken]);
-	return tokenKey1;
+
+const char* getRecognizedTokenValueByIndex(int idx){
+	return tokenValue[idx];
 }
 
-const char* getRecognizedValueToken(){
-	char *tokenValue1 = malloc(30);
-	strcpy(tokenValue1,tokenValue[idxTempToken]);
-	return tokenValue1;
+const char* getRecognizedTokenKeyByIndex(int idx){
+    return tokenKey[idx];
 }
-/*******************************************
-  get next
- *******************************************/
-void nextRecognizedKeyToken (){
-	if (idxTempToken>=idxToken){
-		printf("Iterei ate o limite");
-		return;
-	}
 
-	char *tokenKeyValye =malloc(100);
-	strcpy(tokenKeyValye,tokenKey[idxTempToken]);
-	strcat(tokenKeyValye," | ");
-	strcat(tokenKeyValye,tokenValue[idxTempToken]);
-
-	printf("\tindex: %d -> %s\n",idxTempToken, tokenKeyValye);
-	idxTempToken++;
-
+int convertTokenPositionToLexemaID(int idxTokenPosition) {
+    char idString[30];
+    strcpy(idString,getRecognizedTokenValueByIndex(idxTokenPosition));
+    int idStringConvertedtoInt = atoi(idString);
+    return idStringConvertedtoInt;
 }
+
 
 
 /*******************************************
   Controla Vetor de strings validas     
  *******************************************/
-int identifiedStrings( char * id ){
+int addStructID( char * id ){
 	int i=0;
-	char c[2];
-	for (i=0; i< idxIdentifiedStringVector ; i++) {
-		if (strcmp(identifiedStringsVector[i],id)==0) {
-			i = i+1;
-			//sprintf(c, "%d", i);
-			//return c;
+	for (i=0; i< structID.idx ; i++) {
+		if (strcmp(structID.ID[i],id)==0) {
 			return i;
-
 		}
 	}
-	strcpy(identifiedStringsVector[idxIdentifiedStringVector], id);
-	i = idxIdentifiedStringVector;
-	idxIdentifiedStringVector++;
-
-	i = i+1;
-	//sprintf(c, "%d", i);
-	//printf("%s\n", c);    
-	//return c;
+	strcpy(structID.ID[structID.idx], id);
+	i = structID.idx;
+	structID.idx++;
 	return i;
+}
+
+void setStructIDType(char vtype, int idx ) {
+    structID.type[idx] = vtype;
+}
+
+char  getStructIDType(int idx ) {
+    return structID.type[idx];
+}
+
+char * getStructIDName(int idx) {
+    return structID.ID[idx];
+}
+
+void printStructID() {
+	printf("/**************************************\n\tLEXEMA TABLE\n*************************************/\n");
+	printf("IDX                      LEXEMA  TYPE\n");
+    int i=0;
+    for (i=0; i <structID.idx; i++) {
+        //printf("IDX: %d\nLexema:%s\nType: %c\n---------\n",i,getStructIDName(i), getStructIDType(i));
+        printf("%2d%29s%3c\n",i,getStructIDName(i), getStructIDType(i));
+    }
 }
 
 /*******************************************
@@ -186,7 +206,7 @@ void cleanTokenFile(char p) {
   Função realiza append
   no arquivo de TOKEN 
  *******************************************/
-void write(char *tk) {
+void write(const char *tk) {
 	FILE * fp;
 
 	// todo exemplo
@@ -199,7 +219,7 @@ void write(char *tk) {
   Função realiza realiza a leitura
   e joga todo o arquivo em um buffer
  *******************************************/
-void read(char *filename) {
+void read(const char *filename) {
 	FILE *fp;
 	char c;
 
@@ -424,6 +444,11 @@ int lookahead(char* word) {
 	}
 }
 
+int lookback() {
+    return getCurrentPosOnStack()-1;
+}
+
+
 void nonTerminalStart() {
 	push(stack[idxStack].current,stack[idxStack].current);
 }
@@ -446,30 +471,122 @@ int nonTerminalAccept() {
 	return TRUE;
 }
 
+int equalString(const char* string1, char* string2) {
+	if (strcmp(string1, string2)==0) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}	
+}
+
+struct StackSemantica {
+    int idxTokenStart[256];
+    int idxTokenEnd[256];
+    int idx;
+};
+struct StackSemantica stackSemantica;
+
+void pushStackSemantica(int tokenStart, int tokenEnd ) {
+    stackSemantica.idxTokenStart[stackSemantica.idx] = tokenStart;
+    stackSemantica.idxTokenEnd[stackSemantica.idx] = tokenEnd;
+    stackSemantica.idx++;    
+}
+
+int ruleArithimetic(int firstTokenRead, int lastTokenRead) {
+	int i;
+	char firstType = getStructIDType(convertTokenPositionToLexemaID(firstTokenRead));
+	
+	for (i=firstTokenRead+1; i<=lastTokenRead; i++) {
+		
+		char TOKENKEY[30];
+		strcpy(TOKENKEY,getRecognizedTokenKeyByIndex(i));
+		//printf("==> %s  \n",TOKENKEY);
+
+		if (equalString(TOKENKEY, "id") ) {
+			//printf("LEXEMA %d\n", convertTokenPositionToLexemaID(i));
+			char laterType=getStructIDType(convertTokenPositionToLexemaID(i));
+
+			if (firstType!=laterType ) {
+				//printf("%c | %c\n",firstType, laterType);
+				//printf("%s | %s\n",getStructIDName(convertTokenPositionToLexemaID(firstTokenRead)), getStructIDName(convertTokenPositionToLexemaID(i)));
+				//printf("%d | %d\n",firstTokenRead, i);
+				return FALSE;
+			}
+		} else {
+			continue;
+		}
+	}
+	return TRUE;
+
+}
+
+int semanticValidator(int firstTokenRead, int lastTokenRead) {
+	//Arithimetic Rule
+	if (ruleArithimetic(firstTokenRead,lastTokenRead)) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+void AnalisadorSemantico() {
+	int i;
+	int reconstructionindex;
+	char recontructedStatement[2056];
+	memset(recontructedStatement,0, 2056);
+
+	for (i=0; i < stackSemantica.idx ; i ++ ) {
+		for (reconstructionindex=stackSemantica.idxTokenStart[i]; reconstructionindex<= stackSemantica.idxTokenEnd[i]; reconstructionindex++) {
+			strcat(recontructedStatement," ");
+			strcat(recontructedStatement,getRecognizedTokenKeyByIndex(reconstructionindex));
+		}
+		if(!semanticValidator(stackSemantica.idxTokenStart[i],stackSemantica.idxTokenEnd[i])) {
+			printf("Reconstructed Statement:\n%s\n",recontructedStatement );
+			printf("/**************************************\n\tSEMANTIC ERROR\n*************************************/\n");
+			exit(-1);
+		}
+	}
+	printf("/**************************************\n\tSEMANTIC OK\n*************************************/\n");
+}
 
 int PARAMS() {
 
 	nonTerminalStart();
 
-	if (lookahead("int") ||lookahead("boolean") ) {
+	if (lookahead("int")  ) {
+        int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
 		if (lookahead("id") ) {
+            setStructIDType('i',idxLexema);
 			return nonTerminalAccept();
 		} else {
-			pushLog("[PARAMS]", "id");
+			pushLog("[PARAMS-1]", "id");
 			nonTerminalError();
 		}
-	} else {
-		pushLog("[PARAMS]", "int ou boolean");
-		nonTerminalError();
-	}
+	} 
+	
+    if (lookahead("boolean") ) {
+        int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
+        if (lookahead("id") ) {
+            setStructIDType('b',idxLexema);
+            return nonTerminalAccept();
+        } else {
+            pushLog("[PARAMS-2]", "id");
+            nonTerminalError();
+        }
+    }
+    
+    pushLog("[PARAMS]", "<nenhuma das derivacoes foi identificada>");
+    return nonTerminalRefuse(); 
+
 }
 
 int VAR() {
 	nonTerminalStart();
 
 	if (lookahead("int") ) {
+        int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());        
 		if (lookahead("id") ) {
 			if (lookahead("PV") ) {
+                setStructIDType('i',idxLexema);
 				return nonTerminalAccept();
 			} else {
 				pushLog("[VAR]", "PV");
@@ -484,8 +601,10 @@ int VAR() {
 		nonTerminalError();
 	}
 	if (lookahead("boolean") ) {
+        int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack()); 
 		if (lookahead("id") ) {
 			if (lookahead("PV") ) {
+                setStructIDType('b',idxLexema);
 				return nonTerminalAccept();
 			} else {
 				pushLog("[VAR]", "PV");
@@ -508,17 +627,24 @@ int VAR() {
 int METODO () {
 	nonTerminalStart();
 	if (lookahead("public") ) {
-		if (lookahead("int") || lookahead("boolean")  ) {
+		if (lookahead("int") || lookahead("boolean")) {
+			char methodReturnType;
+			if(equalString(getRecognizedTokenKeyByIndex(lookback()), "int" )){
+				methodReturnType='i';
+			} else {
+				methodReturnType='b';
+			}
+            int idxLexema=convertTokenPositionToLexemaID(getCurrentPosOnStack());
 			if (lookahead("id") ) {
 				if (lookahead("AP") ) {
 					if (PARAMS() ) {
 						if (lookahead("FP") ) {
 							if (lookahead("ACH") ) {
-METODO_VAR:
+                                METODO_VAR:
 								if (VAR() ) {
 									goto METODO_VAR;
 								} else {
-METODO_RETENTA_COMANDO: 
+                                    METODO_RETENTA_COMANDO: 
 									if (CMD()) {
 										goto METODO_RETENTA_COMANDO;
 									} else {
@@ -526,6 +652,7 @@ METODO_RETENTA_COMANDO:
 											if (EXP() ) {
 												if (lookahead("PV") ) {
 													if (lookahead("FCH") ) {
+                                                        setStructIDType(methodReturnType,idxLexema);
 														return nonTerminalAccept();
 													} else {
 														pushLog("[METODO]", "FCH");
@@ -582,6 +709,7 @@ int CLASSE() {
 	nonTerminalStart();
 
 	if (lookahead("class") ) {
+        int idxLexema=convertTokenPositionToLexemaID(getCurrentPosOnStack());
 		if (lookahead("id") ) {
 			if (lookahead("extends") ) {
 				if (lookahead("id") ) {
@@ -600,6 +728,7 @@ VAR_TESTE_AGAIN:
 						//CASO NAO HOUVER DECLARAO DE VAR OK
 						if ( METODO() ) {
 							if (lookahead("FCH") ) {
+                                setStructIDType('c',idxLexema);
 								return nonTerminalAccept();
 							} else {
 								pushLog("[CLASSE]", "FCH");
@@ -816,29 +945,6 @@ int SEXP() {
 		pushLog("[SEXP]", "new");
 		nonTerminalError();
 	}
-	//PEXP [ EXP ]
-	/*if ( PEXP() ) {
-	  if (lookahead("AC") ) {
-	  if ( EXP() ) {
-	  if (lookahead("FC")) {
-
-	  } else {
-	  pushLog("[SEXP]", "FC");
-	  nonTerminalError();                    
-	  }
-	  } else {
-	  pushLog("[SEXP]", "null");
-	  nonTerminalError();
-	  }
-	  } else {
-	  pushLog("[SEXP]", "null");
-	  nonTerminalError();
-	  }
-	  } else {
-	  pushLog("[SEXP]", "null");
-	  nonTerminalError();
-	  }
-	 */
 
 	pushLog("[SEXP]", "<nenhuma das derivacoes foi identificada>");
 	return nonTerminalRefuse();
@@ -891,6 +997,10 @@ int AEXP() {
 	if (lookahead("id") || lookahead("num") ) {
 		if (lookahead("PLUS")) {
 			if (lookahead("id")  || lookahead("num")) {
+                AEXP_GOTO:
+                if (AEXP()) {
+                    goto AEXP_GOTO;
+                }
 				return nonTerminalAccept();
 			} else {
 				pushLog("[AEXP-1]", "[1] id ou num");
@@ -922,6 +1032,21 @@ int AEXP() {
 		pushLog("[AEXP-2]", "[4] id ou num");
 		nonTerminalError();
 	}
+    // + id
+    // - id
+    // + num
+    // - num
+    if (lookahead("MINUS") || lookahead("PLUS") ) {
+        if (lookahead("id") || lookahead("num")) {
+            return nonTerminalAccept();
+        } else {
+            pushLog("[AEXP-3]", "MINUS");
+            nonTerminalError();         
+        }
+    } else {
+        pushLog("[AEXP-3]", "[5] id ou num");
+        nonTerminalError();
+    }
 
 	pushLog("[AEXP]", "<nenhuma das derivacoes foi identificada>");
 	return nonTerminalRefuse();
@@ -1012,19 +1137,24 @@ int CMD() {
 	nonTerminalStart();
 
 	//'{' {CMD} '}'
-	if (lookahead("ACH")) {
-		if (CMD()) {
-			if (lookahead("FCH")) {
-				return nonTerminalAccept();
-			} else {
-				pushLog("[CMD-1]", "FCH");
-				return nonTerminalRefuse();
-			}
-		} else {
-			pushLog("[CMD-1]", "<TENTATIVA CMD(1)>");
-			return nonTerminalRefuse();
-		}
-	} 
+    if (lookahead("ACH")) {
+        if (CMD()) {
+            CMD_CMD:
+            if (CMD()) {
+                goto CMD_CMD;
+            }
+            if (lookahead("FCH")) {
+                return nonTerminalAccept();
+            } else {
+                pushLog("[CMD-1]", "FCH");
+                return nonTerminalRefuse();
+            }
+        } else {
+            pushLog("[CMD-1]", "<TENTATIVA CMD(1)>");
+            return nonTerminalRefuse();
+        }
+    } 
+
 	//if '(' EXP ')' CMD else CMD
 	if (lookahead("if")) {
 		if (lookahead("AP")) {
@@ -1133,9 +1263,12 @@ int CMD() {
 	} 
 	//ID = EXP ;
 	if (lookahead("id")) {
+		int firstTokenRead = lookback();
 		if (lookahead("ATR")) {
 			if (EXP()) {
 				if (lookahead("PV")) {
+					int lastTokenRead = lookback();					
+					pushStackSemantica(firstTokenRead,lastTokenRead);
 					return nonTerminalAccept();
 				} else {
 					pushLog("[CMD-6]", "PV");
@@ -1150,8 +1283,9 @@ int CMD() {
 			return nonTerminalRefuse();
 		}
 	} 
+    //aparentemente, nao eh utilizado. comentado
 	//ID '[' EXP ']' = EXP ;
-	if (lookahead("id")) {
+	/*if (lookahead("id")) {
 		if (lookahead("AC")) {
 			if (EXP()) {
 				if (lookahead("FC")) {
@@ -1183,7 +1317,7 @@ int CMD() {
 			pushLog("[CMD-7]", "AC");
 			return nonTerminalRefuse();
 		}
-	}
+	}*/
 
 	pushLog("[CMD]", "<nenhuma das derivacoes foi identificada>");
 	return nonTerminalRefuse();
@@ -1194,6 +1328,7 @@ int MAIN() {
 	nonTerminalStart();
 
 	if (lookahead("class")){
+        int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
 		if (lookahead("id")) {
 			if (lookahead("ACH")) {
 				if (lookahead("public")) {
@@ -1210,6 +1345,7 @@ int MAIN() {
 															if (CMD()) {
 																if (lookahead("FCH")) {
 																	if (lookahead("FCH")) {
+                                                                        setStructIDType('c',idxLexema);
 																		return nonTerminalAccept();
 																	} else {
 																		//FCH
@@ -1323,9 +1459,9 @@ int PROG() {
 
 void AnalisadorSintatico(){
 	if (PROG()) {
-		printf("LEITUTRA SINTATIC OK\n");
+        printf("/**************************************\n\tSINTAX OK\n*************************************/\n");
 	} else {
-		printf("/**************************************\n\tPILHA DE ERRO\n*************************************/\n");
+		printf("/**************************************\n\tSINTAX ERROR\n\tPILHA DE ERRO\n*************************************/\n");
 		while (popLog()) {
 			NULL;
 		}
@@ -1586,7 +1722,7 @@ void tokenLibrary(char * tk) {
 
 	}
 	char n[1024];
-	int idIndex =identifiedStrings(variavel);
+	int idIndex =addStructID(variavel);
 	char idIndexString[2];
 	sprintf(idIndexString, "%d", idIndex);
 	strcpy(n, "<id,");
