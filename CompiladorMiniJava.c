@@ -10,7 +10,8 @@ char str3[BUFFER];
 
 struct StructID {
     char ID[128][30]; //128 posicoes com 30 caracteres cada
-    char type[128]; //(i)nt, (b)oolean, (m)ethod, (c)lass
+    char type[128]; //(i)nt, (b)oolean, (c)lass
+    char methodInputType[128]; //(i)nt (b)oolean
     int idx; //indice corrente;
 };
 struct StructID structID;
@@ -134,9 +135,15 @@ int addStructID( char * id ){
 void setStructIDType(char vtype, int idx ) {
     structID.type[idx] = vtype;
 }
-
+void setStrucIDMethodInputType (char vInputType, int idx) {
+	structID.methodInputType[idx] = vInputType;
+}
 char  getStructIDType(int idx ) {
     return structID.type[idx];
+}
+
+char  getStructIDMethodInputType(int idx ) {
+    return structID.methodInputType[idx];
 }
 
 char * getStructIDName(int idx) {
@@ -145,12 +152,13 @@ char * getStructIDName(int idx) {
 
 void printStructID() {
 	printf("/**************************************\n\tLEXEMA TABLE\n*************************************/\n");
-	printf("IDX                      LEXEMA  TYPE\n");
+	printf("IDX                      LEXEMA  TYPE  METHOD INPUT TYPE\n");
+	printf("--------------------------------------------------------\n");
     int i=0;
-    for (i=0; i <structID.idx; i++) {
-        //printf("IDX: %d\nLexema:%s\nType: %c\n---------\n",i,getStructIDName(i), getStructIDType(i));
-        printf("%2d%29s%3c\n",i,getStructIDName(i), getStructIDType(i));
+    for (i=0; i <structID.idx; i++) {       
+        printf("%2d|%29s|%3c|%3c\n",i,getStructIDName(i), getStructIDType(i), getStructIDMethodInputType(i));
     }
+    printf("\n");
 }
 
 /*******************************************
@@ -520,11 +528,38 @@ int ruleArithimetic(int firstTokenRead, int lastTokenRead) {
 
 }
 
+int ruleMethodInput(int firstTokenRead, int lastTokenRead) {
+	int i;
+	char methodInputType = getStructIDMethodInputType(convertTokenPositionToLexemaID(firstTokenRead));
+	for (i=firstTokenRead+1; i<=lastTokenRead; i++) {
+		
+		char TOKENKEY[30];
+		strcpy(TOKENKEY,getRecognizedTokenKeyByIndex(i));
+
+		if (equalString(TOKENKEY, "id") ) {
+			char laterType=getStructIDType(convertTokenPositionToLexemaID(i));
+
+			if (methodInputType!=laterType ) {
+				return FALSE;
+			}
+		} else {
+			continue;
+		}
+	}
+	return TRUE;
+
+}
+
 int semanticValidator(int firstTokenRead, int lastTokenRead) {
 	//Arithimetic Rule
 	if (ruleArithimetic(firstTokenRead,lastTokenRead)) {
 		return TRUE;
 	}
+
+	if (ruleMethodInput(firstTokenRead,lastTokenRead)) {
+		return TRUE;
+	}
+	printf("Semantic rules not validated\n");
 	return FALSE;
 }
 
@@ -535,20 +570,18 @@ void AnalisadorSemantico() {
 	memset(recontructedStatement,0, 2056);
 
 	for (i=0; i < stackSemantica.idx ; i ++ ) {
-		for (reconstructionindex=stackSemantica.idxTokenStart[i]; reconstructionindex<= stackSemantica.idxTokenEnd[i]; reconstructionindex++) {
-			strcat(recontructedStatement," ");
-			strcat(recontructedStatement,getRecognizedTokenKeyByIndex(reconstructionindex));
-		}
 		if(!semanticValidator(stackSemantica.idxTokenStart[i],stackSemantica.idxTokenEnd[i])) {
 			printf("Reconstructed Statement:\n%s\n",recontructedStatement );
 			printf("/**************************************\n\tSEMANTIC ERROR\n*************************************/\n");
+			strcat(recontructedStatement," ");
+			strcat(recontructedStatement,getRecognizedTokenKeyByIndex(i));
 			exit(-1);
 		}
 	}
 	printf("/**************************************\n\tSEMANTIC OK\n*************************************/\n");
 }
 
-int PARAMS() {
+int PARAMS(int idxLexemaNomeMetodo) {
 
 	nonTerminalStart();
 
@@ -556,6 +589,7 @@ int PARAMS() {
         int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
 		if (lookahead("id") ) {
             setStructIDType('i',idxLexema);
+            setStrucIDMethodInputType('i', idxLexemaNomeMetodo);
 			return nonTerminalAccept();
 		} else {
 			pushLog("[PARAMS-1]", "id");
@@ -567,6 +601,7 @@ int PARAMS() {
         int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());
         if (lookahead("id") ) {
             setStructIDType('b',idxLexema);
+            setStrucIDMethodInputType('b', idxLexemaNomeMetodo);
             return nonTerminalAccept();
         } else {
             pushLog("[PARAMS-2]", "id");
@@ -583,6 +618,7 @@ int VAR() {
 	nonTerminalStart();
 
 	if (lookahead("int") ) {
+		//sintax
         int idxLexema = convertTokenPositionToLexemaID(getCurrentPosOnStack());        
 		if (lookahead("id") ) {
 			if (lookahead("PV") ) {
@@ -637,8 +673,13 @@ int METODO () {
             int idxLexema=convertTokenPositionToLexemaID(getCurrentPosOnStack());
 			if (lookahead("id") ) {
 				if (lookahead("AP") ) {
-					if (PARAMS() ) {
+					//semantica
+					int firstTokenRead = lookback();					
+					if (PARAMS(idxLexema) ) {				
 						if (lookahead("FP") ) {
+							//semantica
+							int lastTokenRead = lookback();					
+							//pushStackSemantica(firstTokenRead,lastTokenRead);
 							if (lookahead("ACH") ) {
                                 METODO_VAR:
 								if (VAR() ) {
@@ -763,9 +804,13 @@ int PEXP2() {
 	//PEXP . ID '(' [EXPS] ')'    
 	if (lookahead("PONTO") ) {
 		if (lookahead("id") ) {
+			//semantica para validar parametro de input de metodo
+			int firstTokenRead = lookback();	
 			if (lookahead("AP") ) {
 				if ( EXP() ) {
 					if (lookahead("FP") ) {
+						int lastTokenRead = lookback();	
+						pushStackSemantica(firstTokenRead, lastTokenRead);
 						return nonTerminalAccept();
 					} else {
 						pushLog("[PEXP2]", "FP");
@@ -820,7 +865,7 @@ int  PEXP() {
 	}
 
 	//this
-	if (lookahead("this") ) {
+	if (lookahead("this") ) {		
 		if (PEXP2() ) {
 			return nonTerminalAccept(); 
 		} else {
@@ -956,6 +1001,10 @@ int MEXP() {
 	if (lookahead("id") || lookahead("num") ) {
 		if (lookahead("MULT")) {
 			if (lookahead("id")  || lookahead("num")) {
+                MEXP_GOTO:
+                if (AEXP()) {
+                    goto MEXP_GOTO;
+                }
 				return nonTerminalAccept();
 			} else {
 				pushLog("[MEXP]", "[1] id ou num");
@@ -1019,6 +1068,10 @@ int AEXP() {
 	if (lookahead("id") || lookahead("num") ) {
 		if (lookahead("MINUS")) {
 			if (lookahead("id")  || lookahead("num")) {
+                AEXP_GOTO2:
+                if (AEXP()) {
+                    goto AEXP_GOTO2;
+                }
 				return nonTerminalAccept();
 			} else {
 				pushLog("[AEXP-2]", "[3] id ou num");
@@ -1465,6 +1518,7 @@ void AnalisadorSintatico(){
 		while (popLog()) {
 			NULL;
 		}
+		exit(-1);
 	}
 }
 
