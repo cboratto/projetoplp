@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
 #define BUFFER 4196
 #define TRUE 1
 #define FALSE 0
@@ -48,8 +50,8 @@ void setStructIDType(char vtype, int idx );
 char * getStructIDName(int idx);
 void removeCommentLine();
 void cleanTokenFile(char p);
-void write(const char *tk);
-void read( const char *filename);
+void write_plp(const char *tk);
+void read_plp( const char *filename);
 void readToken();
 void tokenLibrary(char * tk);
 
@@ -58,7 +60,7 @@ void AnalisadorSemantico();
 
 int main() {
 	cleanTokenFile('c');
-	read(SOURCE_FILE);
+	read_plp(SOURCE_FILE);
 	removeCommentLine();
 	char *pch;
 	pch = strtok(str," ");
@@ -214,7 +216,7 @@ void cleanTokenFile(char p) {
   Função realiza append
   no arquivo de TOKEN 
  *******************************************/
-void write(const char *tk) {
+void write_plp(const char *tk) {
 	FILE * fp;
 
 	// todo exemplo
@@ -227,7 +229,7 @@ void write(const char *tk) {
   Função realiza realiza a leitura
   e joga todo o arquivo em um buffer
  *******************************************/
-void read(const char *filename) {
+void read_plp(const char *filename) {
 	FILE *fp;
 	char c;
 
@@ -304,7 +306,9 @@ char* spreadTokenKeyValue (char *tk, int kv) {
 	} else if (kv == 1) {
 		return tokenValue;
 	}
+    return "";
 }
+
 /*******************************************
   Função realiza realiza a leitura
   e joga todo o arquivo em um buffer
@@ -1531,63 +1535,63 @@ void tokenLibrary(char * tk) {
 	//
 	if (strcmp("if",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<if>");
+		write_plp("<if>");
 		return;
 	} else if (strcmp("while",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<while>");
+		write_plp("<while>");
 		return;
 	} else if (strcmp("this",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<this>");
+		write_plp("<this>");
 		return;
 	} else if (strcmp("new",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<new>");
+		write_plp("<new>");
 		return;
 	} else if (strcmp("else",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<else>");
+		write_plp("<else>");
 		return;
 	} else if (strcmp("System.out.println",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<System.out.println>");
+		write_plp("<System.out.println>");
 		return;
 	} else if (strcmp("boolean",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<boolean>");
+		write_plp("<boolean>");
 		return;
 	} else if (strcmp("class",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<class>");
+		write_plp("<class>");
 		return;
 	} else if (strcmp("extends",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<extends>");
+		write_plp("<extends>");
 		return;
 	} else if (strcmp("public",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<public>");
+		write_plp("<public>");
 		return;
 	} else if (strcmp("static",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<static>");
+		write_plp("<static>");
 		return;
 	} else if (strcmp("void",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<void>");
+		write_plp("<void>");
 		return;
 	} else if (strcmp("main",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<main>");
+		write_plp("<main>");
 		return;
 	} else if (strcmp("return",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<return>");
+		write_plp("<return>");
 		return;
 	} else if (strcmp("int",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<int>");
+		write_plp("<int>");
 		return;
 	}
 	//
@@ -1595,38 +1599,38 @@ void tokenLibrary(char * tk) {
 	//
 	else if (strcmp("(",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<AP>");		
+		write_plp("<AP>");		
 		return;
 	} else if (strcmp(")",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<FP>");		
+		write_plp("<FP>");		
 		return;
 	} else if (strcmp("[",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<AC>");		
+		write_plp("<AC>");		
 		return;
 	} else if (strcmp("]",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<FC>");		
+		write_plp("<FC>");		
 		return;
 	} else if (strcmp("{",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<ACH>");		
+		write_plp("<ACH>");		
 		return;
 	} else if (strcmp("}",tk)==0) {		
-		write("<FCH>");		
+		write_plp("<FCH>");		
 		return;
 	} else if (strcmp(".",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<PONTO>");		
+		write_plp("<PONTO>");		
 		return;
 	} else if (strcmp(",",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<VIRG>");       
+		write_plp("<VIRG>");       
 		return;
 	} else if (strcmp(";",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<PV>");       
+		write_plp("<PV>");       
 		return;
 	}
 	//
@@ -1634,39 +1638,39 @@ void tokenLibrary(char * tk) {
 	//
 	else if (strcmp("==",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<EQ>");		
+		write_plp("<EQ>");		
 		return;
 	} else if (strcmp("&&",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<AND>");
+		write_plp("<AND>");
 		return;
 	} else if (strcmp("-",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<MINUS>");		
+		write_plp("<MINUS>");		
 		return;
 	} else if (strcmp("+",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<PLUS>");		
+		write_plp("<PLUS>");		
 		return;
 	} else if (strcmp("*",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<MULT>");		
+		write_plp("<MULT>");		
 		return;
 	} else if (strcmp("!",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<NOT>");		
+		write_plp("<NOT>");		
 		return;
 	} else if (strcmp("=",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<ATR>");		
+		write_plp("<ATR>");		
 		return;
 	} else if (strcmp("!=",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<DIF>");		
+		write_plp("<DIF>");		
 		return;
 	} else if (strcmp("<",tk)==0) {
 		//printf("RECONHECIDO: %s \n", tk );
-		write("<LT>");		
+		write_plp("<LT>");		
 		return;
 	}
 	//
@@ -1731,7 +1735,7 @@ void tokenLibrary(char * tk) {
 		strcpy(n, "<num,");
 		strcat(n, number);
 		strcat(n, ">"); 
-		write(n); 
+		write_plp(n); 
 		//identificou numero, portanto, deve parar execucao
 		return;
 	}
@@ -1782,7 +1786,7 @@ void tokenLibrary(char * tk) {
 	strcpy(n, "<id,");
 	strcat(n, idIndexString);
 	strcat(n, ">"); 
-	write(n);   
+	write_plp(n);   
 	return; 
 
 }
